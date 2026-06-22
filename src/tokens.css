@@ -1,43 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap');
 /* everbrew-ui : tokens.css
-   全プロジェクト共通の単一トークン定義。値は「文章」ではなくここが唯一の真実。 */
+   全プロジェクト共通の単一トークン定義。値は「文章」ではなくここが唯一の真実。
+   デザイン基準は lark-message-analytics(構造・余白・タイポ・質感)。
+   色はブランド体系(brand=#58b9e2 に白文字を載せない / interactive=brand-deep)を優先する。 */
 :root {
-  /* --- color (既存の統一済み体系を踏襲) --- */
+  /* --- color : brand 体系 --- */
   --eb-brand:        #58b9e2;  /* EVERBREW ブランド色。白文字を直接載せない */
   --eb-brand-deep:   #2b86ae;  /* ボタン等。白文字とWCAG準拠 */
+  --eb-brand-deeper: #1f6f95;  /* hover/active の一段濃い色 */
+  --eb-brand-soft:   #e9f5fb;  /* brand の極薄面。濃色文字を載せる */
+  --eb-brand-ring:   rgba(88,185,226,.32); /* focus グロー */
+  --eb-brand-ink:    #0c3346;  /* brand 面(#58b9e2)に載せる濃紺文字 */
   --eb-accent:       var(--eb-brand-deep); /* 後方互換エイリアス */
 
-  --eb-bg:           #ffffff;
+  /* --- color : 面と文字 --- */
+  --eb-bg:           #eef0f3;  /* キャンバス。薄グレーで白カードを浮かせる */
   --eb-surface:      #ffffff;
-  --eb-surface-2:    #f6f8fa;  /* サイドバー等の薄い面 */
-  --eb-border:       #e6e8eb;
-  --eb-text:         #1a1d21;
-  --eb-text-muted:   #5b636b;
+  --eb-surface-2:    #f6f7f9;  /* カード内の薄い面 */
+  --eb-border:       rgba(23,21,26,.08);
+  --eb-border-strong:rgba(23,21,26,.16);
+  --eb-text:         #1b1920;
+  --eb-text-muted:   #5d5a64;
+  --eb-text-subtle:  #a09da8;
   --eb-text-on-deep: #ffffff;
+
+  /* --- color : dark sidebar(ink) --- */
+  --eb-ink:          #17151a;
+  --eb-ink-2:        #211e26;
+  --eb-ink-line:     rgba(255,255,255,.07);
+  --eb-ink-fg:       #f2f0f4;
+  --eb-ink-muted:    #9b97a3;
+
+  /* --- color : semantic --- */
+  --eb-ok:    #2f8a57; --eb-ok-soft:    #e9f4ec;
+  --eb-red:   #c93a2e; --eb-red-soft:   #fbeae8;
+  --eb-amber: #b06a12; --eb-amber-soft: #faf0dd;
 
   /* --- spacing (4px ベースの固定スケール。各実装の裁量を消す) --- */
   --eb-sp-1: 4px;  --eb-sp-2: 8px;  --eb-sp-3: 12px; --eb-sp-4: 16px;
   --eb-sp-5: 24px; --eb-sp-6: 32px; --eb-sp-7: 48px; --eb-sp-8: 64px;
 
-  /* --- radius --- */
-  --eb-radius-sm: 6px; --eb-radius: 10px; --eb-radius-lg: 16px; --eb-radius-pill: 999px;
+  /* --- radius (lark: 8/12/16 + pill) --- */
+  --eb-radius-sm: 8px; --eb-radius: 12px; --eb-radius-lg: 16px; --eb-radius-pill: 999px;
 
-  /* --- type scale --- */
-  --eb-font: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Segoe UI, sans-serif;
-  --eb-fs-1: 12px; --eb-fs-2: 13px; --eb-fs-3: 14px; --eb-fs-4: 16px;
-  --eb-fs-5: 20px; --eb-fs-6: 24px; --eb-fs-7: 32px;
-  --eb-lh: 1.55; --eb-lh-tight: 1.25;
-  --eb-fw-normal: 450; --eb-fw-medium: 550; --eb-fw-bold: 680;
+  /* --- type scale (lark: 本文 Noto Sans JP / 見出し・数値 Sora / 時刻・件数 mono) --- */
+  --eb-font:      'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", Segoe UI, sans-serif;
+  --eb-font-disp: 'Sora', 'Noto Sans JP', -apple-system, sans-serif;
+  --eb-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  --eb-fs-1: 11px;   --eb-fs-2: 12px;   --eb-fs-3: 13.5px; --eb-fs-4: 15px;
+  --eb-fs-5: 19px;   --eb-fs-6: 24px;   --eb-fs-7: 32px;
+  --eb-lh: 1.65; --eb-lh-tight: 1.25;
+  --eb-fw-normal: 400; --eb-fw-medium: 500; --eb-fw-bold: 700;
+  --eb-tracking-label: .08em;  /* 小ラベルの字間 */
 
-  /* --- elevation (Vercel/Linear的に控えめ) --- */
-  --eb-shadow-1: 0 1px 2px rgba(16,24,40,.05);
-  --eb-shadow-2: 0 4px 16px rgba(16,24,40,.08);
+  /* --- elevation (lark: 二層で「浮かせる」) --- */
+  --eb-shadow-1: 0 1px 2px rgba(23,21,26,.05), 0 8px 24px rgba(23,21,26,.07);
+  --eb-shadow-2: 0 2px 4px rgba(23,21,26,.06), 0 18px 48px rgba(23,21,26,.14);
 
   /* --- interaction --- */
   --eb-tap: 44px;                 /* 最小タップ領域 */
-  --eb-motion: 160ms cubic-bezier(.2,.6,.2,1);
+  --eb-motion: 150ms cubic-bezier(.2,.6,.2,1);
 
   /* --- layout / z --- */
-  --eb-sidebar-w: 248px;
+  --eb-sidebar-w: 252px;
   --eb-topbar-h: 56px;
-  --eb-z-topbar: 50; --eb-z-sidebar: 40; --eb-z-overlay: 60;
+  --eb-z-topbar: 50; --eb-z-sidebar: 40; --eb-z-overlay: 60; --eb-z-drawer: 70;
 }

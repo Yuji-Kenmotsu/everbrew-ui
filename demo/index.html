@@ -2,38 +2,75 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>everbrew-ui demo</title>
   <!-- 開発中はローカル dist を参照。ここが「詰める」場所。 -->
   <link rel="stylesheet" href="../dist/everbrew.css">
 </head>
 <body>
-  <eb-shell active-app="stockscan" title="STOCKSCAN"
-    apps='[{"id":"label","label":"Can Label","href":"#","icon":"label"},
-           {"id":"draft","label":"Draft Menu","href":"#","icon":"menu"},
-           {"id":"stockscan","label":"STOCKSCAN","href":"#","icon":"stock"},
-           {"id":"invoice","label":"Invoice DX","href":"#","icon":"invoice"}]'
-    tabs='[{"id":"list","label":"在庫一覧"},{"id":"scan","label":"スキャン"}]'>
+  <eb-shell active-app="canlabel" title="缶ラベル"
+    brand="RIO BREWING"
+    user="剱持 雄二"
+    mobile-nav="auto"
+    apps='[{"id":"canlabel","label":"缶ラベル","href":"#","icon":"label"},
+           {"id":"barrelseal","label":"樽上シール","href":"#","icon":"seal"},
+           {"id":"riomo","label":"RIO_MO画像","href":"#","icon":"image"},
+           {"id":"master","label":"マスタ編集","href":"#","icon":"master"}]'
+    tabs='[{"id":"list","label":"一覧"},{"id":"new","label":"新規作成"}]'>
     <div slot="content">
       <div class="eb-stack">
-        <span class="eb-badge">●  同期済み</span>
-        <div class="eb-card">
-          <h2 style="margin:0 0 12px">この枠が全アプリ共通のシェルです</h2>
-          <p style="color:var(--eb-text-muted);margin:0 0 16px">
-            サイドバー・トップバー・ロゴ・タブは everbrew-ui が一元管理。
-            各プロジェクトはこの content の中だけを実装します。</p>
-          <button class="eb-btn eb-btn--primary">主アクション</button>
-          <button class="eb-btn">副アクション</button>
+
+        <div class="eb-row">
+          <span class="eb-stat"><b>24</b><span>登録ラベル</span></span>
+          <span class="eb-stat"><b class="eb-stat--alert">3</b><span>未承認</span></span>
+          <span class="eb-stat"><b>RIO</b><span>ブランド</span></span>
+          <div style="flex:1"></div>
+          <div class="eb-seg" role="tablist">
+            <button role="tab" aria-selected="true">下書き</button>
+            <button role="tab" aria-selected="false">公開</button>
+          </div>
         </div>
+
+        <div class="eb-card eb-card--accent">
+          <div class="eb-row" style="justify-content:space-between;align-items:flex-start">
+            <div style="min-width:0">
+              <h2 class="eb-h1" style="margin:0 0 6px">この枠が全アプリ共通のシェルです</h2>
+              <p class="eb-muted" style="margin:0">
+                サイドバー・トップバー・ロゴ・タブ・モバイルナビは everbrew-ui が一元管理。
+                各プロジェクトはこの content の中だけを実装します。</p>
+            </div>
+            <span class="eb-badge eb-badge--ok">● 同期済み</span>
+          </div>
+          <div class="eb-row" style="margin-top:16px">
+            <button class="eb-btn eb-btn--primary">主アクション</button>
+            <button class="eb-btn">副アクション</button>
+          </div>
+        </div>
+
         <div class="eb-card">
+          <p class="eb-label" style="margin:0 0 12px">最近の缶ラベル</p>
           <table class="eb-table">
-            <thead><tr><th>商品</th><th>在庫</th><th>状態</th></tr></thead>
+            <thead><tr><th>商品</th><th>容量</th><th>更新</th><th>状態</th></tr></thead>
             <tbody>
-              <tr><td>Pale Ale</td><td>120</td><td><span class="eb-badge">適正</span></td></tr>
-              <tr><td>IPA</td><td>18</td><td><span class="eb-badge">要発注</span></td></tr>
+              <tr>
+                <td>Pale Ale</td><td>350ml</td>
+                <td class="eb-mono eb-subtle">06/18</td>
+                <td><span class="eb-badge eb-badge--ok">承認済</span></td>
+              </tr>
+              <tr>
+                <td>Hazy IPA</td><td>350ml</td>
+                <td class="eb-mono eb-subtle">06/20</td>
+                <td><span class="eb-badge eb-badge--warn">確認中</span></td>
+              </tr>
+              <tr>
+                <td>Session Sour</td><td>500ml</td>
+                <td class="eb-mono eb-subtle">06/21</td>
+                <td><span class="eb-badge eb-badge--alert">要修正</span></td>
+              </tr>
             </tbody>
           </table>
         </div>
+
       </div>
     </div>
   </eb-shell>

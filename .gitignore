@@ -1,0 +1,18 @@
+# dependencies
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+
+# 作業中の一時物・確認用スクショ(リポジトリに混ぜない)
+.playwright-mcp/
+*.png
+*.log
+
+# secrets(このリポジトリは静的UIライブラリで秘密は持たないが念のため)
+.env
+.clasprc.json
+*.serviceaccount.json
