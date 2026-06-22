@@ -1,0 +1,11 @@
+/* everbrew-ui : components.css
+   シェル核(shell.css)以外の共有コンポーネント。 */
+.eb-badge { display: inline-flex; align-items: center; gap: var(--eb-sp-1);
+  height: 22px; padding: 0 var(--eb-sp-2); border-radius: var(--eb-radius-pill);
+  background: rgba(43,134,174,.10); color: var(--eb-brand-deep);
+  font-size: var(--eb-fs-1); font-weight: var(--eb-fw-medium); }
+.eb-table { width: 100%; border-collapse: collapse; font-size: var(--eb-fs-3); }
+.eb-table th, .eb-table td { text-align: left; padding: var(--eb-sp-3) var(--eb-sp-4);
+  border-bottom: 1px solid var(--eb-border); }
+.eb-table th { color: var(--eb-text-muted); font-weight: var(--eb-fw-medium); }
+.eb-stack > * + * { margin-top: var(--eb-sp-4); }

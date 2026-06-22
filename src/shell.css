@@ -1,0 +1,83 @@
+/* everbrew-ui : shell.css
+   アプリシェル(chrome)。サイドバー/トップバー/ロゴ/タブを一元定義。
+   各プロジェクトはこの枠の content スロットに中身を差し込むだけ。 */
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--eb-font); color: var(--eb-text);
+  background: var(--eb-bg); font-size: var(--eb-fs-3); line-height: var(--eb-lh);
+  -webkit-font-smoothing: antialiased; }
+
+.eb-shell { display: grid; grid-template-columns: var(--eb-sidebar-w) 1fr;
+  grid-template-rows: var(--eb-topbar-h) 1fr; min-height: 100vh;
+  grid-template-areas: "side top" "side main"; }
+
+/* --- sidebar (アプリ間で共通のスイート切替) --- */
+.eb-side { grid-area: side; background: var(--eb-surface-2);
+  border-right: 1px solid var(--eb-border); padding: var(--eb-sp-4) var(--eb-sp-3);
+  display: flex; flex-direction: column; gap: var(--eb-sp-1);
+  position: sticky; top: 0; height: 100vh; z-index: var(--eb-z-sidebar); }
+.eb-logo { display: flex; align-items: center; gap: var(--eb-sp-2);
+  padding: var(--eb-sp-2) var(--eb-sp-2) var(--eb-sp-5);
+  font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-4); letter-spacing: -.01em; }
+.eb-logo svg { width: 22px; height: 22px; color: var(--eb-brand-deep); }
+.eb-nav-item { display: flex; align-items: center; gap: var(--eb-sp-3);
+  min-height: var(--eb-tap); padding: 0 var(--eb-sp-3); border-radius: var(--eb-radius-sm);
+  color: var(--eb-text-muted); text-decoration: none; font-weight: var(--eb-fw-medium);
+  transition: background var(--eb-motion), color var(--eb-motion); }
+.eb-nav-item svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.eb-nav-item:hover { background: rgba(43,134,174,.08); color: var(--eb-text); }
+.eb-nav-item[aria-current="page"] { background: var(--eb-brand-deep);
+  color: var(--eb-text-on-deep); }
+
+/* --- topbar --- */
+.eb-top { grid-area: top; display: flex; align-items: center;
+  gap: var(--eb-sp-4); padding: 0 var(--eb-sp-5);
+  border-bottom: 1px solid var(--eb-border); background: var(--eb-surface);
+  position: sticky; top: 0; z-index: var(--eb-z-topbar); }
+.eb-top-title { font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-4); }
+.eb-top-spacer { flex: 1; }
+
+/* --- in-app tabs --- */
+.eb-tabs { grid-area: main; }
+.eb-tabbar { display: flex; gap: var(--eb-sp-1); padding: 0 var(--eb-sp-5);
+  border-bottom: 1px solid var(--eb-border); background: var(--eb-surface);
+  position: sticky; top: var(--eb-topbar-h); z-index: 30; overflow-x: auto; }
+.eb-tab { appearance: none; border: 0; background: transparent; cursor: pointer;
+  min-height: var(--eb-tap); padding: 0 var(--eb-sp-3); color: var(--eb-text-muted);
+  font: inherit; font-weight: var(--eb-fw-medium); white-space: nowrap;
+  border-bottom: 2px solid transparent; }
+.eb-tab[aria-selected="true"] { color: var(--eb-brand-deep);
+  border-bottom-color: var(--eb-brand-deep); }
+
+/* --- content slot --- */
+.eb-main { grid-area: main; }
+.eb-content { padding: var(--eb-sp-5); max-width: 1120px; }
+.eb-tabs + .eb-content, .eb-tabbar ~ .eb-content { } /* placeholder for compose order */
+
+/* --- shared components (最小核) --- */
+.eb-btn { appearance: none; border: 1px solid var(--eb-border); cursor: pointer;
+  min-height: var(--eb-tap); padding: 0 var(--eb-sp-4); border-radius: var(--eb-radius-sm);
+  background: var(--eb-surface); color: var(--eb-text); font: inherit;
+  font-weight: var(--eb-fw-medium); transition: all var(--eb-motion); }
+.eb-btn:hover { border-color: var(--eb-brand-deep); }
+.eb-btn--primary { background: var(--eb-brand-deep); border-color: var(--eb-brand-deep);
+  color: var(--eb-text-on-deep); }
+.eb-card { border: 1px solid var(--eb-border); border-radius: var(--eb-radius);
+  background: var(--eb-surface); box-shadow: var(--eb-shadow-1); padding: var(--eb-sp-5); }
+.eb-field { display: flex; flex-direction: column; gap: var(--eb-sp-2); }
+.eb-field input, .eb-field select { min-height: var(--eb-tap); padding: 0 var(--eb-sp-3);
+  border: 1px solid var(--eb-border); border-radius: var(--eb-radius-sm);
+  font: inherit; background: var(--eb-surface); }
+
+/* --- mobile-first: iPhone Chrome で1カラム。サイドバーは下部ドロワー --- */
+@media (max-width: 768px) {
+  .eb-shell { grid-template-columns: 1fr; grid-template-rows: var(--eb-topbar-h) 1fr;
+    grid-template-areas: "top" "main"; }
+  .eb-side { position: fixed; inset: auto 0 0 0; height: auto; flex-direction: row;
+    border-right: 0; border-top: 1px solid var(--eb-border); overflow-x: auto;
+    padding: var(--eb-sp-2); }
+  .eb-logo { display: none; }
+  .eb-nav-item { flex-direction: column; gap: 2px; min-width: 64px; font-size: var(--eb-fs-1);
+    padding: var(--eb-sp-1); }
+  .eb-content { padding: var(--eb-sp-4); padding-bottom: calc(var(--eb-tap) + var(--eb-sp-6)); }
+}

@@ -1,0 +1,43 @@
+/* everbrew-ui : tokens.css
+   全プロジェクト共通の単一トークン定義。値は「文章」ではなくここが唯一の真実。 */
+:root {
+  /* --- color (既存の統一済み体系を踏襲) --- */
+  --eb-brand:        #58b9e2;  /* EVERBREW ブランド色。白文字を直接載せない */
+  --eb-brand-deep:   #2b86ae;  /* ボタン等。白文字とWCAG準拠 */
+  --eb-accent:       var(--eb-brand-deep); /* 後方互換エイリアス */
+
+  --eb-bg:           #ffffff;
+  --eb-surface:      #ffffff;
+  --eb-surface-2:    #f6f8fa;  /* サイドバー等の薄い面 */
+  --eb-border:       #e6e8eb;
+  --eb-text:         #1a1d21;
+  --eb-text-muted:   #5b636b;
+  --eb-text-on-deep: #ffffff;
+
+  /* --- spacing (4px ベースの固定スケール。各実装の裁量を消す) --- */
+  --eb-sp-1: 4px;  --eb-sp-2: 8px;  --eb-sp-3: 12px; --eb-sp-4: 16px;
+  --eb-sp-5: 24px; --eb-sp-6: 32px; --eb-sp-7: 48px; --eb-sp-8: 64px;
+
+  /* --- radius --- */
+  --eb-radius-sm: 6px; --eb-radius: 10px; --eb-radius-lg: 16px; --eb-radius-pill: 999px;
+
+  /* --- type scale --- */
+  --eb-font: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Segoe UI, sans-serif;
+  --eb-fs-1: 12px; --eb-fs-2: 13px; --eb-fs-3: 14px; --eb-fs-4: 16px;
+  --eb-fs-5: 20px; --eb-fs-6: 24px; --eb-fs-7: 32px;
+  --eb-lh: 1.55; --eb-lh-tight: 1.25;
+  --eb-fw-normal: 450; --eb-fw-medium: 550; --eb-fw-bold: 680;
+
+  /* --- elevation (Vercel/Linear的に控えめ) --- */
+  --eb-shadow-1: 0 1px 2px rgba(16,24,40,.05);
+  --eb-shadow-2: 0 4px 16px rgba(16,24,40,.08);
+
+  /* --- interaction --- */
+  --eb-tap: 44px;                 /* 最小タップ領域 */
+  --eb-motion: 160ms cubic-bezier(.2,.6,.2,1);
+
+  /* --- layout / z --- */
+  --eb-sidebar-w: 248px;
+  --eb-topbar-h: 56px;
+  --eb-z-topbar: 50; --eb-z-sidebar: 40; --eb-z-overlay: 60;
+}

@@ -1,0 +1,22 @@
+<!-- 各プロジェクトの GAS HtmlService 側。これは _everbrew_ui.html という include 用パーシャル。
+     反映スクリプトが書き込む/更新するのはこのファイル(またはこの sentinel ブロック)。 -->
+
+<!-- EVERBREW-UI:START (このブロックは apply-everbrew-ui.ps1 が管理。手で編集しない) -->
+<link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/Yuji-Kenmotsu/everbrew-ui@v1.0.0/dist/everbrew.min.css">
+<script defer
+  src="https://cdn.jsdelivr.net/gh/Yuji-Kenmotsu/everbrew-ui@v1.0.0/dist/everbrew.min.js"></script>
+<!-- EVERBREW-UI:END -->
+
+<!-- 使い方(index.html 側):
+  <?!= include('_everbrew_ui') ?>            // <head> 内で読み込む
+  ...
+  <eb-shell active-app="stockscan" title="STOCKSCAN"
+            apps='<?= APPS_JSON ?>' tabs='[...]'>
+    <div slot="content"> ... このアプリ固有の中身だけ ... </div>
+  </eb-shell>
+  ・@v1.0.0 はタグ固定(ブランチ参照にしない)。上げる時はバージョンを差し替える。
+  ・.min.css / .min.js は jsDelivr が自動生成する。
+  ・apps の JSON は全プロジェクトで同一にする(スイート横断のサイドバー)。
+       共通定義を ScriptProperties か共通 .gs 定数に置くと、ここもぶれない。
+-->

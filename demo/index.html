@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>everbrew-ui demo</title>
+  <!-- 開発中はローカル dist を参照。ここが「詰める」場所。 -->
+  <link rel="stylesheet" href="../dist/everbrew.css">
+</head>
+<body>
+  <eb-shell active-app="stockscan" title="STOCKSCAN"
+    apps='[{"id":"label","label":"Can Label","href":"#","icon":"label"},
+           {"id":"draft","label":"Draft Menu","href":"#","icon":"menu"},
+           {"id":"stockscan","label":"STOCKSCAN","href":"#","icon":"stock"},
+           {"id":"invoice","label":"Invoice DX","href":"#","icon":"invoice"}]'
+    tabs='[{"id":"list","label":"在庫一覧"},{"id":"scan","label":"スキャン"}]'>
+    <div slot="content">
+      <div class="eb-stack">
+        <span class="eb-badge">●  同期済み</span>
+        <div class="eb-card">
+          <h2 style="margin:0 0 12px">この枠が全アプリ共通のシェルです</h2>
+          <p style="color:var(--eb-text-muted);margin:0 0 16px">
+            サイドバー・トップバー・ロゴ・タブは everbrew-ui が一元管理。
+            各プロジェクトはこの content の中だけを実装します。</p>
+          <button class="eb-btn eb-btn--primary">主アクション</button>
+          <button class="eb-btn">副アクション</button>
+        </div>
+        <div class="eb-card">
+          <table class="eb-table">
+            <thead><tr><th>商品</th><th>在庫</th><th>状態</th></tr></thead>
+            <tbody>
+              <tr><td>Pale Ale</td><td>120</td><td><span class="eb-badge">適正</span></td></tr>
+              <tr><td>IPA</td><td>18</td><td><span class="eb-badge">要発注</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </eb-shell>
+  <script src="../dist/everbrew.js"></script>
+</body>
+</html>
