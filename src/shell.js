@@ -11,12 +11,12 @@
      brand       … サイドバーのロゴ文字(既定 "EVER BREW")
      user        … トップバー右のアカウント表示。文字列 or {"name","initial"}。未指定なら非表示
      mobile-nav  … "auto"(既定) | "bar" | "drawer"
-                    auto: サイドバー項目 5個以下→下部タブバー / 6個以上→ドロワー */
+                    auto: サイドバー項目 5個以下→下部タブバー / 6個以上→ドロワー
+     help-title  … マニュアルパネルの見出し(既定 "マニュアル") */
 (function () {
   "use strict";
 
   var ICON = {
-    // SVG ライン アイコン(絵文字は使わない)。
     label:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h12"/></svg>',
     menu:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>',
     stock:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/></svg>',
@@ -26,8 +26,10 @@
     master:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M4 12h7M4 18h13"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="12" r="2"/></svg>',
     dot:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/></svg>'
   };
-  var LOGO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>';
-  var BURGER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  var LOGO    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>';
+  var BURGER  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  var HELP    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>';
+  var CLOSE_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 
   function parseJSON(attr, fallback) {
     if (!attr) return fallback;
@@ -55,6 +57,8 @@
 
       var activeApp = this.getAttribute("active-app") || "";
       var title     = this.getAttribute("title") || activeApp;
+      this.removeAttribute("title"); // ホストの title グローバル属性を除去(領域全体への誤 tooltip を防ぐ)
+      var helpTitle = this.getAttribute("help-title") || "マニュアル";
       var brand     = this.getAttribute("brand");
       if (brand == null || brand === "") brand = "EVER BREW";
       var apps  = parseJSON(this.getAttribute("apps"), []);
@@ -78,10 +82,17 @@
         mnav = apps.length >= 6 ? "drawer" : "bar";
       }
 
-      // 既存の中身を退避(slot=content を優先、無ければ全子要素)
+      // manual slot の検出(コンテンツがある時だけヘルプボタンを描画)
+      var manualSlotted = Array.prototype.slice.call(this.querySelectorAll('[slot="manual"]'));
+      var hasManual = manualSlotted.length > 0;
+
+      // 既存の中身を退避(slot=content を優先、無ければ全子要素。manual slot は除外)
       var slotted = this.querySelectorAll('[slot="content"]');
-      var content = slotted.length ? Array.prototype.slice.call(slotted)
-                                   : Array.prototype.slice.call(this.childNodes);
+      var content = slotted.length
+        ? Array.prototype.slice.call(slotted)
+        : Array.prototype.slice.call(this.childNodes).filter(function (n) {
+            return !(n.getAttribute && n.getAttribute("slot") === "manual");
+          });
 
       var shell = el('<div class="eb-shell"></div>');
       shell.setAttribute("data-mnav", mnav);
@@ -94,7 +105,7 @@
       side.appendChild(logo);
       apps.forEach(function (a) {
         var icon = ICON[a.icon] || ICON.dot;
-        var item = el('<a class="eb-nav-item" href="' + esc(a.href || "#") + '">' +
+        var item = el('<a class="eb-nav-item" title="' + esc(a.label || a.id) + '" href="' + esc(a.href || "#") + '">' +
                       icon + '<span>' + esc(a.label || a.id) + '</span></a>');
         if (a.id === activeApp) item.setAttribute("aria-current", "page");
         side.appendChild(item);
@@ -109,6 +120,12 @@
       top.appendChild(burger);
       top.appendChild(el('<div class="eb-top-title">' + esc(title) + '</div>'));
       top.appendChild(el('<div class="eb-top-spacer"></div>'));
+      var helpBtn = null;
+      if (hasManual) {
+        helpBtn = el('<button class="eb-help-btn" type="button" aria-label="ヘルプを開く" ' +
+                     'aria-expanded="false" aria-controls="eb-manual-panel">' + HELP + '</button>');
+        top.appendChild(helpBtn);
+      }
       if (user) {
         var u = el('<div class="eb-user"></div>');
         u.appendChild(el('<span class="eb-avatar" aria-hidden="true">' + esc(user.initial) + '</span>'));
@@ -145,10 +162,30 @@
       var scrim = el('<div class="eb-scrim" hidden></div>');
       shell.appendChild(scrim);
 
+      // ---- manual panel ----
+      var manual = null;
+      var manualClose = null;
+      if (hasManual) {
+        manual = el('<aside class="eb-manual" id="eb-manual-panel" role="dialog" ' +
+                    'aria-modal="true" aria-label="' + esc(helpTitle) + '"></aside>');
+        var mHeader = el('<div class="eb-manual-header"></div>');
+        mHeader.appendChild(el('<div class="eb-manual-title">' + esc(helpTitle) + '</div>'));
+        manualClose = el('<button class="eb-manual-close" type="button" aria-label="閉じる">' + CLOSE_X + '</button>');
+        mHeader.appendChild(manualClose);
+        manual.appendChild(mHeader);
+        var mBody = el('<div class="eb-manual-body"></div>');
+        manualSlotted.forEach(function (n) { mBody.appendChild(n); });
+        manual.appendChild(mBody);
+        shell.appendChild(manual);
+      }
+
       this.appendChild(shell);
 
       // ---- drawer の挙動(モバイル drawer 時のみ意味を持つ) ----
       this._setupDrawer(shell, side, burger, scrim);
+      if (hasManual) {
+        this._setupManual(shell, manual, helpBtn, scrim, manualClose);
+      }
     }
 
     _setupDrawer(shell, side, burger, scrim) {
@@ -174,7 +211,7 @@
         if (!shell.classList.contains("eb-nav-open")) return;
         shell.classList.remove("eb-nav-open");
         burger.setAttribute("aria-expanded", "false");
-        scrim.hidden = true;
+        scrim.hidden = !shell.classList.contains("eb-manual-open");
         document.removeEventListener("keydown", onKey, true);
         if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
       }
@@ -191,7 +228,9 @@
       burger.addEventListener("click", function () {
         if (shell.classList.contains("eb-nav-open")) close(); else open();
       });
-      scrim.addEventListener("click", close);
+      scrim.addEventListener("click", function () {
+        if (shell.classList.contains("eb-nav-open")) close();
+      });
       // ドロワー内のリンクを押したら閉じる(画面遷移を妨げない)
       side.addEventListener("click", function (e) {
         if (e.target.closest(".eb-nav-item")) close();
@@ -204,9 +243,53 @@
       this._ebDrawer = { open: open, close: close };
       void self;
     }
+
+    _setupManual(shell, manual, helpBtn, scrim, closeBtn) {
+      function focusables() {
+        return Array.prototype.slice.call(
+          manual.querySelectorAll('a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])')
+        ).filter(function (n) { return n.offsetParent !== null || n === document.activeElement; });
+      }
+      function open() {
+        if (shell.classList.contains("eb-manual-open")) return;
+        shell.classList.add("eb-manual-open");
+        helpBtn.setAttribute("aria-expanded", "true");
+        scrim.hidden = false;
+        var f = focusables();
+        if (f.length) f[0].focus();
+        document.addEventListener("keydown", onKey, true);
+      }
+      function close() {
+        if (!shell.classList.contains("eb-manual-open")) return;
+        shell.classList.remove("eb-manual-open");
+        helpBtn.setAttribute("aria-expanded", "false");
+        scrim.hidden = !shell.classList.contains("eb-nav-open");
+        document.removeEventListener("keydown", onKey, true);
+        helpBtn.focus();
+      }
+      function onKey(e) {
+        if (e.key === "Escape") { e.preventDefault(); close(); return; }
+        if (e.key === "Tab") {
+          var f = focusables(); if (!f.length) return;
+          var first = f[0], last = f[f.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
+
+      helpBtn.addEventListener("click", function () {
+        if (shell.classList.contains("eb-manual-open")) close(); else open();
+      });
+      closeBtn.addEventListener("click", close);
+      scrim.addEventListener("click", function () {
+        if (shell.classList.contains("eb-manual-open")) close();
+      });
+
+      this._ebManual = { open: open, close: close };
+    }
   }
 
   if (!customElements.get("eb-shell")) customElements.define("eb-shell", EBShell);
   // 手続き的に使いたい場合のエントリも公開
-  window.EBShell = { version: "1.0.0" };
+  window.EBShell = { version: "1.1.0" };
 })();

@@ -12,11 +12,32 @@
     brand="RIO BREWING"
     user="剱持 雄二"
     mobile-nav="auto"
+    help-title="マニュアル"
     apps='[{"id":"canlabel","label":"缶ラベル","href":"#","icon":"label"},
            {"id":"barrelseal","label":"樽上シール","href":"#","icon":"seal"},
            {"id":"riomo","label":"RIO_MO画像","href":"#","icon":"image"},
            {"id":"master","label":"マスタ編集","href":"#","icon":"master"}]'
     tabs='[{"id":"list","label":"一覧"},{"id":"new","label":"新規作成"}]'>
+    <div slot="manual">
+      <h2 style="margin:0 0 4px;font-size:1rem;font-weight:700">缶ラベル発注 — 使い方</h2>
+      <p style="margin:0 0 20px;font-size:.8rem;color:#888">最終更新: 2026-06-23</p>
+
+      <h3 style="margin:0 0 6px;font-size:.85rem;font-weight:700;color:#555">1. ビール名を選ぶ</h3>
+      <p style="margin:0 0 16px;line-height:1.7;font-size:.9rem">ドロップダウンから対象のビール名を選択します。リストに無い銘柄は管理者に追加を依頼してください。</p>
+
+      <h3 style="margin:0 0 6px;font-size:.85rem;font-weight:700;color:#555">2. 種類を選ぶ</h3>
+      <p style="margin:0 0 16px;line-height:1.7;font-size:.9rem">「ロール」はラベラー機で貼付するタイプ、「手貼り」は手作業で貼るタイプです。入稿先の印刷会社が異なります。</p>
+
+      <h3 style="margin:0 0 6px;font-size:.85rem;font-weight:700;color:#555">3. 枚数・納期を確認する</h3>
+      <p style="margin:0 0 16px;line-height:1.7;font-size:.9rem">枚数を選択すると入稿先と目安納期が表示されます。土日祝日や繁忙期は遅れる場合があります。確定日は入稿後にグループメッセージでご確認ください。</p>
+
+      <h3 style="margin:0 0 6px;font-size:.85rem;font-weight:700;color:#555">4. 依頼ボタンを押す</h3>
+      <p style="margin:0 0 16px;line-height:1.7;font-size:.9rem">「この内容で依頼する」を押すと Lark グループに通知が届き、担当者が対応を開始します。キャンセルは担当者に直接連絡してください。</p>
+
+      <h3 style="margin:0 0 6px;font-size:.85rem;font-weight:700;color:#555">お問い合わせ</h3>
+      <p style="margin:0;line-height:1.7;font-size:.9rem">不明点は醸造所 Lark グループ「ラベル発注」チャンネルへ。</p>
+    </div>
+
     <div slot="content">
       <div class="eb-stack">
 
