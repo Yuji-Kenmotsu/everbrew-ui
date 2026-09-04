@@ -1,0 +1,526 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap');
+/* everbrew-ui : tokens.css
+   全プロジェクト共通の単一トークン定義。値は「文章」ではなくここが唯一の真実。
+   デザイン基準は lark-message-analytics(構造・余白・タイポ・質感)。
+   色はブランド体系(brand=#58b9e2 に白文字を載せない / interactive=brand-deep)を優先する。 */
+:root {
+  /* --- color : brand 体系 --- */
+  --eb-brand:        #58b9e2;  /* EVERBREW ブランド色。白文字を直接載せない */
+  --eb-brand-deep:   #2b86ae;  /* ボタン等。白文字とWCAG準拠 */
+  --eb-brand-deeper: #1f6f95;  /* hover/active の一段濃い色 */
+  --eb-brand-soft:   #e9f5fb;  /* brand の極薄面。濃色文字を載せる */
+  --eb-brand-ring:   rgba(88,185,226,.32); /* focus グロー */
+  --eb-brand-ink:    #0c3346;  /* brand 面(#58b9e2)に載せる濃紺文字 */
+  --eb-accent:       var(--eb-brand-deep); /* 後方互換エイリアス */
+
+  /* --- color : 面と文字 --- */
+  --eb-bg:           #eef0f3;  /* キャンバス。薄グレーで白カードを浮かせる */
+  --eb-surface:      #ffffff;
+  --eb-surface-2:    #f6f7f9;  /* カード内の薄い面 */
+  --eb-border:       rgba(23,21,26,.08);
+  --eb-border-strong:rgba(23,21,26,.16);
+  --eb-text:         #1b1920;
+  --eb-text-muted:   #5d5a64;
+  --eb-text-subtle:  #a09da8;
+  --eb-text-on-deep: #ffffff;
+
+  /* --- color : dark sidebar(ink) --- */
+  --eb-ink:          #17151a;
+  --eb-ink-2:        #211e26;
+  --eb-ink-line:     rgba(255,255,255,.07);
+  --eb-ink-fg:       #f2f0f4;
+  --eb-ink-muted:    #9b97a3;
+
+  /* --- color : semantic --- */
+  --eb-ok:    #2f8a57; --eb-ok-soft:    #e9f4ec;
+  --eb-red:   #c93a2e; --eb-red-soft:   #fbeae8;
+  --eb-amber: #b06a12; --eb-amber-soft: #faf0dd;
+
+  /* --- spacing (4px ベースの固定スケール。各実装の裁量を消す) --- */
+  --eb-sp-1: 4px;  --eb-sp-2: 8px;  --eb-sp-3: 12px; --eb-sp-4: 16px;
+  --eb-sp-5: 24px; --eb-sp-6: 32px; --eb-sp-7: 48px; --eb-sp-8: 64px;
+
+  /* --- radius (lark: 8/12/16 + pill) --- */
+  --eb-radius-sm: 8px; --eb-radius: 12px; --eb-radius-lg: 16px; --eb-radius-pill: 999px;
+
+  /* --- type scale (lark: 本文 Noto Sans JP / 見出し・数値 Sora / 時刻・件数 mono) --- */
+  --eb-font:      'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", Segoe UI, sans-serif;
+  --eb-font-disp: 'Sora', 'Noto Sans JP', -apple-system, sans-serif;
+  --eb-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  --eb-fs-1: 11px;   --eb-fs-2: 12px;   --eb-fs-3: 13.5px; --eb-fs-4: 15px;
+  --eb-fs-5: 19px;   --eb-fs-6: 24px;   --eb-fs-7: 32px;
+  --eb-lh: 1.65; --eb-lh-tight: 1.25;
+  --eb-fw-normal: 400; --eb-fw-medium: 500; --eb-fw-bold: 700;
+  --eb-tracking-label: .08em;  /* 小ラベルの字間 */
+
+  /* --- elevation (lark: 二層で「浮かせる」) --- */
+  --eb-shadow-1: 0 1px 2px rgba(23,21,26,.05), 0 8px 24px rgba(23,21,26,.07);
+  --eb-shadow-2: 0 2px 4px rgba(23,21,26,.06), 0 18px 48px rgba(23,21,26,.14);
+
+  /* --- interaction --- */
+  --eb-tap: 44px;                 /* 最小タップ領域 */
+  --eb-ease:   cubic-bezier(.2,.6,.2,1); /* 全アニメで共有する減速カーブ */
+  --eb-motion: 150ms var(--eb-ease);     /* UI の即応(hover/開閉)。尺を変えたい場合もカーブは共有する */
+
+  /* --- layout / z --- */
+  --eb-sidebar-w: 252px;
+  --eb-topbar-h: 56px;
+  --eb-z-topbar: 50; --eb-z-sidebar: 40; --eb-z-overlay: 60; --eb-z-drawer: 70;
+}
+
+
+/* everbrew-ui : status.css
+   進捗ダッシュボード(型E)。1枚もの帳票として組む。<eb-shell> は使わない。
+   色・余白・角丸・影・タイポ・モーションは tokens.css の変数だけを使い、リテラルを書かない。
+   DOM は render-status.mjs が決定論的に生成する。ここは見た目だけを持つ。
+
+   ── DOM 契約(レンダラが守る。ここを正本とする) ───────────────────────────
+   <body class="ebs-body">
+     <div class="ebs">
+       <header class="ebs-head" data-reveal>
+         <div class="ebs-head__main">
+           <p class="ebs-eyebrow">EVERBREW / <span class="ebs-mono">owner/repo</span></p>
+           <h1 class="ebs-head__title">プロジェクト名</h1>
+           <p class="ebs-head__sum">概要</p>
+         </div>
+         <div class="ebs-head__side">
+           <span class="ebs-chip ebs-chip--start|--end">開始|終了</span>
+           <span class="ebs-chip ebs-chip--type">型 B</span>
+           <dl class="ebs-meta"><div><dt>生成</dt><dd>…</dd></div>…</dl>
+         </div>
+       </header>
+
+       <section class="ebs-sec" data-reveal>
+         <h2 class="ebs-sec__title">見出し<span class="ebs-sec__note">補足</span></h2>
+         … 中身 …
+       </section>
+
+       進捗:   <div class="ebs-prog">
+                 <div class="ebs-ring">svg(.ebs-ring__track / .ebs-ring__val[style="--ebs-p:63"][data-ring])
+                   <div class="ebs-ring__num"><b data-countup>63</b><span>%</span></div></div>
+                 <dl class="ebs-kpi"><div><dt>…</dt><dd>…</dd></div>…</dl>
+               </div>
+       ガント: <div class="ebs-gantt">
+                 <div class="ebs-gantt__today" style="--ebs-l:41"><span>今日</span></div>
+                 <div class="ebs-gantt__row">
+                   <div class="ebs-gantt__name">…</div>
+                   <div class="ebs-gantt__track">
+                     <i class="ebs-gantt__bar is-done|is-current|is-planned|is-late"
+                        style="--ebs-l:0%;--ebs-w:24%" data-bar></i></div>
+                   <div class="ebs-gantt__pct"><b data-countup>100</b><span>%</span></div>
+                   <div class="ebs-gantt__span">2026-06-01 → 06-14</div>
+                 </div>…</div>
+       カンバン: <div class="ebs-kb"><section class="ebs-kb__col ebs-kb__col--done|--doing|--planned">
+                   <h3 class="ebs-kb__head">実装済み<b class="ebs-kb__count" data-countup>7</b></h3>
+                   <ul class="ebs-kb__list"><li class="ebs-kb__item">…<p class="ebs-kb__note">…</p></li></ul>
+                 </section>…</div>
+       ブロッカー: <ol class="ebs-bl"><li class="ebs-bl__item ebs-bl__item--high|--medium|--low [is-resolved]">
+                     <div class="ebs-bl__head"><span class="ebs-bl__sev">HIGH</span>
+                       <h3 class="ebs-bl__title">…</h3></div>
+                     <dl class="ebs-bl__facts">…</dl>
+                     <details class="ebs-bl__steps"><summary>解決手順</summary><ol>…</ol></details>
+                   </li>…</ol>
+
+       <footer class="ebs-foot">…</footer>
+     </div>
+   ─────────────────────────────────────────────────────────────────────
+   アニメの初期状態は :root.ebs-js が付いている時だけ効く(= status.js が付ける)。
+   JS 無効・印刷・prefers-reduced-motion では常に最終状態で出る。 */
+
+/* ── 面と土台 ───────────────────────────────────────── */
+.ebs-body { margin: 0; background: var(--eb-bg); }
+
+.ebs {
+  --ebs-max: 1120px;
+  --ebs-gantt-h: var(--eb-sp-3);
+  --ebs-rail: 168px;
+  --ebs-pct-w: 56px;
+  --ebs-span-w: 148px;
+  /* リングの円周(r=52 の 2πr)。半径を変えたらここだけ直す */
+  --ebs-ring-c: 326.726;
+  /* 演出の尺は型E固有なので tokens には置かない。カーブ(--eb-ease)だけ共有する */
+  --ebs-t-reveal: 420ms;
+  --ebs-t-grow:   700ms;
+  --ebs-t-ring:   900ms;
+  box-sizing: border-box;
+  max-width: var(--ebs-max);
+  margin: 0 auto;
+  padding: var(--eb-sp-6) var(--eb-sp-5) var(--eb-sp-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--eb-sp-5);
+  font-family: var(--eb-font);
+  font-size: var(--eb-fs-3);
+  line-height: var(--eb-lh);
+  color: var(--eb-text);
+  -webkit-font-smoothing: antialiased;
+}
+.ebs *, .ebs *::before, .ebs *::after { box-sizing: border-box; }
+
+.ebs-mono   { font-family: var(--eb-font-mono); }
+.ebs-muted  { color: var(--eb-text-muted); }
+.ebs-subtle { color: var(--eb-text-subtle); }
+
+/* ── ヘッダー ───────────────────────────────────────── */
+.ebs-head {
+  display: flex; flex-wrap: wrap; align-items: flex-start;
+  gap: var(--eb-sp-5);
+  background: var(--eb-surface);
+  border-radius: var(--eb-radius-lg);
+  box-shadow: var(--eb-shadow-1);
+  padding: var(--eb-sp-5);
+  position: relative; overflow: hidden;
+}
+.ebs-head::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+  background: var(--eb-brand-deep);
+}
+.ebs-head__main { flex: 1 1 340px; min-width: 0; }
+.ebs-head__side {
+  flex: 0 1 auto; min-width: 0;
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--eb-sp-3);
+}
+
+.ebs-eyebrow {
+  margin: 0 0 var(--eb-sp-2);
+  font-size: var(--eb-fs-1); font-weight: var(--eb-fw-bold);
+  letter-spacing: var(--eb-tracking-label); color: var(--eb-text-subtle);
+}
+.ebs-head__title {
+  margin: 0; font-family: var(--eb-font-disp);
+  font-size: var(--eb-fs-7); font-weight: var(--eb-fw-bold);
+  letter-spacing: -.01em; line-height: var(--eb-lh-tight);
+}
+.ebs-head__sum {
+  margin: var(--eb-sp-3) 0 0; max-width: 62ch;
+  font-size: var(--eb-fs-4); color: var(--eb-text-muted);
+}
+
+/* chip(セッション種別 / 型) */
+.ebs-chip {
+  display: inline-flex; align-items: center; gap: var(--eb-sp-1);
+  height: 24px; padding: 0 var(--eb-sp-3);
+  border-radius: var(--eb-radius-pill);
+  font-size: var(--eb-fs-1); font-weight: var(--eb-fw-bold); white-space: nowrap;
+  background: rgba(23,21,26,.06); color: var(--eb-text-muted);
+}
+.ebs-chip--start { background: var(--eb-brand-soft); color: var(--eb-brand-deep); }
+.ebs-chip--end   { background: var(--eb-ok-soft);    color: var(--eb-ok); }
+.ebs-chip--type  { background: var(--eb-surface-2);  color: var(--eb-text-muted);
+  border: 1px solid var(--eb-border); }
+
+/* メタ(生成日時 / HEAD / status.json の mtime …) */
+.ebs-meta { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--eb-sp-1) var(--eb-sp-3); font-size: var(--eb-fs-2); }
+.ebs-meta > div { display: contents; }
+.ebs-meta dt { color: var(--eb-text-subtle); white-space: nowrap; }
+.ebs-meta dd { margin: 0; min-width: 0; color: var(--eb-text-muted);
+  font-family: var(--eb-font-mono); overflow-wrap: anywhere; }
+.ebs-meta dd.is-warn { color: var(--eb-amber); font-weight: var(--eb-fw-bold); }
+
+/* ── セクション ─────────────────────────────────────── */
+.ebs-sec {
+  background: var(--eb-surface);
+  border-radius: var(--eb-radius-lg);
+  box-shadow: var(--eb-shadow-1);
+  padding: var(--eb-sp-5);
+}
+.ebs-sec__title {
+  margin: 0 0 var(--eb-sp-5);
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--eb-sp-3);
+  font-family: var(--eb-font-disp);
+  font-size: var(--eb-fs-5); font-weight: var(--eb-fw-bold);
+  line-height: var(--eb-lh-tight); letter-spacing: -.01em;
+}
+.ebs-sec__note { font-family: var(--eb-font); font-size: var(--eb-fs-2);
+  font-weight: var(--eb-fw-normal); color: var(--eb-text-subtle); }
+
+/* 定義リスト(概要の関係者・リポ・本番URL) */
+.ebs-facts { margin: 0; display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--eb-sp-3) var(--eb-sp-5); font-size: var(--eb-fs-3); }
+.ebs-facts > div { display: contents; }
+.ebs-facts dt { color: var(--eb-text-subtle); font-size: var(--eb-fs-2);
+  font-weight: var(--eb-fw-bold); letter-spacing: var(--eb-tracking-label); }
+.ebs-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.ebs-facts a { color: var(--eb-brand-deep); }
+
+/* ── 全体進捗(リングゲージ + KPI) ─────────────────────── */
+.ebs-prog { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-sp-6); }
+
+.ebs-ring { position: relative; flex: 0 0 auto; width: 132px; height: 132px; }
+.ebs-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ebs-ring__track { fill: none; stroke: var(--eb-surface-2); stroke-width: 12; }
+.ebs-ring__val {
+  fill: none; stroke: var(--eb-brand-deep); stroke-width: 12; stroke-linecap: round;
+  /* r=52 の円周 2πr = 326.726 */
+  stroke-dasharray: var(--ebs-ring-c);
+  stroke-dashoffset: calc(var(--ebs-ring-c) * (1 - var(--ebs-p, 0) / 100));
+}
+.ebs-ring__num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: 1px;
+  font-family: var(--eb-font-disp); line-height: 1;
+}
+.ebs-ring__num b { font-size: var(--eb-fs-7); font-weight: var(--eb-fw-bold); }
+.ebs-ring__num span { font-size: var(--eb-fs-4); color: var(--eb-text-muted); }
+
+.ebs-kpi { margin: 0; flex: 1 1 260px; display: flex; flex-wrap: wrap; gap: var(--eb-sp-3); }
+.ebs-kpi > div {
+  flex: 1 1 96px; background: var(--eb-surface-2);
+  border-radius: var(--eb-radius); padding: var(--eb-sp-3) var(--eb-sp-4);
+}
+.ebs-kpi dt { font-size: var(--eb-fs-1); font-weight: var(--eb-fw-bold);
+  letter-spacing: var(--eb-tracking-label); color: var(--eb-text-subtle); }
+.ebs-kpi dd { margin: var(--eb-sp-1) 0 0; font-family: var(--eb-font-disp);
+  font-size: var(--eb-fs-6); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); }
+.ebs-kpi dd.is-alert { color: var(--eb-red); }
+.ebs-kpi dd.is-warn  { color: var(--eb-amber); }
+.ebs-kpi dd.is-ok    { color: var(--eb-ok); }
+
+/* ── ガント ─────────────────────────────────────────── */
+/* padding-top は「今日」ラベルの逃げ場。ここが無いと 1 行目のトラックに重なる。 */
+.ebs-gantt { position: relative; margin-top: var(--eb-sp-5); padding-top: var(--eb-sp-5);
+  display: flex; flex-direction: column; gap: var(--eb-sp-3); }
+
+.ebs-gantt__row {
+  display: grid;
+  grid-template-columns: var(--ebs-rail) minmax(0, 1fr) var(--ebs-pct-w) var(--ebs-span-w);
+  align-items: center; gap: var(--eb-sp-3);
+}
+.ebs-gantt__name { font-weight: var(--eb-fw-medium); font-size: var(--eb-fs-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ebs-gantt__track { position: relative; height: var(--ebs-gantt-h);
+  background: var(--eb-surface-2); border-radius: var(--eb-radius-pill); }
+.ebs-gantt__bar {
+  position: absolute; top: 0; bottom: 0;
+  left: var(--ebs-l, 0%); width: var(--ebs-w, 0%);
+  min-width: 3px; border-radius: var(--eb-radius-pill);
+  background: var(--eb-text-subtle);
+}
+.ebs-gantt__bar.is-done    { background: var(--eb-ok); }
+.ebs-gantt__bar.is-current { background: var(--eb-brand-deep); }
+.ebs-gantt__bar.is-planned { background: var(--eb-text-subtle); opacity: .55; }
+.ebs-gantt__bar.is-late    { background: var(--eb-amber); }
+.ebs-gantt__pct { font-family: var(--eb-font-disp); font-size: var(--eb-fs-3);
+  font-weight: var(--eb-fw-bold); text-align: right; white-space: nowrap; }
+.ebs-gantt__pct span { color: var(--eb-text-subtle); font-size: var(--eb-fs-1); }
+.ebs-gantt__span { font-family: var(--eb-font-mono); font-size: var(--eb-fs-1);
+  color: var(--eb-text-subtle); white-space: nowrap; text-align: right; }
+
+/* 今日マーカー。--ebs-l は「トラック内の位置(単位なしの 0-100)」をレンダラが入れる。
+   トラック幅 = 行全体 - rail - pct - span - gap*3 なので、その比で左端から算出する。 */
+.ebs-gantt__today {
+  position: absolute; top: 0; bottom: 0; pointer-events: none;
+  left: calc(var(--ebs-rail) + var(--eb-sp-3)
+    + (100% - var(--ebs-rail) - var(--ebs-pct-w) - var(--ebs-span-w) - var(--eb-sp-3) * 3)
+      * var(--ebs-l, 0) / 100);
+  border-left: 2px dashed var(--eb-red);
+  /* .ebs-gantt__track も position:relative なので、z-index が無いと DOM 順で覆われる */
+  z-index: 1;
+}
+.ebs-gantt__today span {
+  position: absolute; top: 0; left: 0; transform: translateX(-50%);
+  font-size: var(--eb-fs-1); font-weight: var(--eb-fw-bold);
+  color: var(--eb-red); background: var(--eb-surface);
+  padding: 0 var(--eb-sp-1); border-radius: var(--eb-radius-sm); white-space: nowrap;
+}
+
+/* 汎用プログレスバー */
+.ebs-bar { position: relative; height: var(--ebs-gantt-h);
+  background: var(--eb-surface-2); border-radius: var(--eb-radius-pill); overflow: hidden; }
+.ebs-bar__fill { display: block; height: 100%; width: var(--ebs-w, 0%);
+  border-radius: var(--eb-radius-pill); background: var(--eb-brand-deep); }
+
+/* ── カンバン(実装済み / 進行中 / 予定) ─────────────────── */
+.ebs-kb { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--eb-sp-4); }
+.ebs-kb__col { min-width: 0; background: var(--eb-surface-2);
+  border-radius: var(--eb-radius); padding: var(--eb-sp-4); }
+.ebs-kb__head {
+  margin: 0 0 var(--eb-sp-3);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--eb-sp-2);
+  font-size: var(--eb-fs-1); font-weight: var(--eb-fw-bold);
+  letter-spacing: var(--eb-tracking-label); color: var(--eb-text-muted);
+}
+.ebs-kb__count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 22px; padding: 0 var(--eb-sp-2);
+  border-radius: var(--eb-radius-pill);
+  font-family: var(--eb-font-disp); font-size: var(--eb-fs-2);
+  background: rgba(23,21,26,.06); color: var(--eb-text-muted);
+}
+.ebs-kb__list { margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: var(--eb-sp-2); }
+.ebs-kb__item {
+  background: var(--eb-surface); border-radius: var(--eb-radius-sm);
+  padding: var(--eb-sp-3) var(--eb-sp-4);
+  border-left: 3px solid var(--eb-text-subtle);
+  font-size: var(--eb-fs-3); box-shadow: var(--eb-shadow-1);
+}
+.ebs-kb__note { margin: var(--eb-sp-1) 0 0; font-size: var(--eb-fs-2); color: var(--eb-text-muted); }
+.ebs-kb__empty { margin: 0; font-size: var(--eb-fs-2); color: var(--eb-text-subtle); }
+
+.ebs-kb__col--done    .ebs-kb__head  { color: var(--eb-ok); }
+.ebs-kb__col--done    .ebs-kb__count { background: var(--eb-ok-soft); color: var(--eb-ok); }
+.ebs-kb__col--done    .ebs-kb__item  { border-left-color: var(--eb-ok); }
+.ebs-kb__col--doing   .ebs-kb__head  { color: var(--eb-brand-deep); }
+.ebs-kb__col--doing   .ebs-kb__count { background: var(--eb-brand-soft); color: var(--eb-brand-deep); }
+.ebs-kb__col--doing   .ebs-kb__item  { border-left-color: var(--eb-brand-deep); }
+.ebs-kb__col--planned .ebs-kb__head  { color: var(--eb-text-subtle); }
+.ebs-kb__col--planned .ebs-kb__item  { border-left-color: var(--eb-text-subtle); box-shadow: none; }
+.ebs-kb__item--dropped { opacity: .5; text-decoration: line-through; }
+
+/* ── ブロッカー ─────────────────────────────────────── */
+.ebs-bl { margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: var(--eb-sp-3); }
+.ebs-bl__item {
+  position: relative; overflow: hidden;
+  background: var(--eb-surface-2); border-radius: var(--eb-radius);
+  padding: var(--eb-sp-4) var(--eb-sp-4) var(--eb-sp-4) var(--eb-sp-5);
+}
+.ebs-bl__item::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 5px; background: var(--eb-text-subtle); }
+.ebs-bl__item--high::before   { background: var(--eb-red); }
+.ebs-bl__item--medium::before { background: var(--eb-amber); }
+
+.ebs-bl__head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--eb-sp-3); }
+.ebs-bl__sev {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 var(--eb-sp-3);
+  border-radius: var(--eb-radius-pill);
+  font-size: var(--eb-fs-1); font-weight: var(--eb-fw-bold);
+  letter-spacing: var(--eb-tracking-label);
+  background: rgba(23,21,26,.06); color: var(--eb-text-muted);
+}
+.ebs-bl__item--high   .ebs-bl__sev { background: var(--eb-red-soft);   color: var(--eb-red); }
+.ebs-bl__item--medium .ebs-bl__sev { background: var(--eb-amber-soft); color: var(--eb-amber); }
+.ebs-bl__title { margin: 0; font-size: var(--eb-fs-4); font-weight: var(--eb-fw-bold);
+  line-height: var(--eb-lh-tight); }
+
+.ebs-bl__facts { margin: var(--eb-sp-3) 0 0; display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--eb-sp-1) var(--eb-sp-4); font-size: var(--eb-fs-2); }
+.ebs-bl__facts > div { display: contents; }
+.ebs-bl__facts dt { color: var(--eb-text-subtle); white-space: nowrap; }
+.ebs-bl__facts dd { margin: 0; min-width: 0; color: var(--eb-text-muted); overflow-wrap: anywhere; }
+
+.ebs-bl__steps { margin-top: var(--eb-sp-3); }
+.ebs-bl__steps > summary {
+  cursor: pointer; list-style: none;
+  display: inline-flex; align-items: center; gap: var(--eb-sp-2);
+  font-size: var(--eb-fs-2); font-weight: var(--eb-fw-bold); color: var(--eb-brand-deep);
+}
+.ebs-bl__steps > summary::-webkit-details-marker { display: none; }
+.ebs-bl__steps > summary::before {
+  content: ""; flex: 0 0 auto; width: 0; height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+  transition: transform var(--eb-motion);
+}
+.ebs-bl__steps[open] > summary::before { transform: rotate(90deg); }
+.ebs-bl__steps ol { margin: var(--eb-sp-3) 0 0; padding-left: var(--eb-sp-5);
+  font-size: var(--eb-fs-3); }
+.ebs-bl__steps li + li { margin-top: var(--eb-sp-2); }
+
+.ebs-bl__item.is-resolved { opacity: .55; }
+.ebs-bl__item.is-resolved::before { background: var(--eb-ok); }
+.ebs-bl__item.is-resolved .ebs-bl__title { text-decoration: line-through; }
+
+.ebs-bl__none { margin: 0; display: inline-flex; align-items: center; gap: var(--eb-sp-2);
+  font-size: var(--eb-fs-3); font-weight: var(--eb-fw-medium); color: var(--eb-ok); }
+
+/* ── フッター(鮮度ガード。CSS/JS の解決経路とタグを出す) ───── */
+.ebs-foot { padding: 0 var(--eb-sp-1); font-family: var(--eb-font-mono);
+  font-size: var(--eb-fs-1); line-height: var(--eb-lh);
+  color: var(--eb-text-subtle); overflow-wrap: anywhere; }
+.ebs-foot p { margin: 0 0 var(--eb-sp-1); }
+
+/* ── レスポンシブ(768px 以下で 1 カラム) ─────────────────── */
+@media (max-width: 768px) {
+  .ebs { padding: var(--eb-sp-4) var(--eb-sp-4) var(--eb-sp-7); gap: var(--eb-sp-4); }
+  .ebs-head, .ebs-sec { padding: var(--eb-sp-4); }
+  .ebs-head__title { font-size: var(--eb-fs-6); }
+  .ebs-head__sum { font-size: var(--eb-fs-3); }
+  .ebs-prog { gap: var(--eb-sp-4); }
+  .ebs-kb { grid-template-columns: minmax(0, 1fr); }
+  .ebs-gantt__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .ebs-gantt__name  { grid-column: 1; }
+  .ebs-gantt__pct   { grid-column: 2; }
+  .ebs-gantt__track { grid-column: 1 / -1; }
+  .ebs-gantt__span  { grid-column: 1 / -1; text-align: left; }
+  /* 折り返すとトラックの絶対座標が成立しないのでマーカーは隠す */
+  .ebs-gantt__today { display: none; }
+  .ebs-facts { grid-template-columns: minmax(0, 1fr); gap: var(--eb-sp-1); }
+  .ebs-facts dt { margin-top: var(--eb-sp-2); }
+}
+
+/* ── アニメの初期状態(status.js が :root.ebs-js を付けた時だけ効く) ───── */
+.ebs-js [data-reveal] { opacity: 0; transform: translateY(10px); }
+.ebs-js [data-reveal].is-in {
+  opacity: 1; transform: none;
+  transition: opacity var(--ebs-t-reveal) var(--eb-ease),
+              transform var(--ebs-t-reveal) var(--eb-ease);
+}
+.ebs-js [data-bar] { width: 0; }
+.ebs-js [data-bar].is-grown {
+  width: var(--ebs-w, 0%);
+  transition: width var(--ebs-t-grow) var(--eb-ease);
+}
+.ebs-js [data-ring] { stroke-dashoffset: var(--ebs-ring-c); }
+.ebs-js [data-ring].is-grown {
+  stroke-dashoffset: calc(var(--ebs-ring-c) * (1 - var(--ebs-p, 0) / 100));
+  transition: stroke-dashoffset var(--ebs-t-ring) var(--eb-ease);
+}
+
+/* ── モーション抑制 ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ebs *, .ebs *::before, .ebs *::after {
+    transition: none !important; animation: none !important;
+  }
+  .ebs-js [data-reveal] { opacity: 1 !important; transform: none !important; }
+  .ebs-js [data-bar]    { width: var(--ebs-w, 0%) !important; }
+  .ebs-js [data-ring]   { stroke-dashoffset: calc(var(--ebs-ring-c) * (1 - var(--ebs-p, 0) / 100)) !important; }
+}
+
+/* ── 印刷(A4縦。アニメを止め、背景色は残す) ──────────────── */
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  .ebs-body { background: var(--eb-surface); }
+  .ebs { max-width: none; padding: 0; gap: var(--eb-sp-4); }
+  .ebs, .ebs *, .ebs *::before, .ebs *::after {
+    transition: none !important; animation: none !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .ebs-js [data-reveal] { opacity: 1 !important; transform: none !important; }
+  .ebs-js [data-bar]    { width: var(--ebs-w, 0%) !important; }
+  .ebs-js [data-ring]   { stroke-dashoffset: calc(var(--ebs-ring-c) * (1 - var(--ebs-p, 0) / 100)) !important; }
+
+  /* A4縦の刷り幅は約 703px で max-width:768px の分岐に入ってしまう。
+     紙は「狭い画面」ではないので、多カラム配置に戻す(この節が後ろなので勝つ)。 */
+  .ebs { --ebs-rail: 116px; --ebs-pct-w: 44px; --ebs-span-w: 118px; }
+  .ebs-head, .ebs-sec { padding: var(--eb-sp-5); }
+  .ebs-head__title { font-size: var(--eb-fs-7); }
+  .ebs-head__sum   { font-size: var(--eb-fs-4); }
+  .ebs-prog { gap: var(--eb-sp-6); }
+  .ebs-kb { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ebs-gantt__row {
+    grid-template-columns: var(--ebs-rail) minmax(0, 1fr) var(--ebs-pct-w) var(--ebs-span-w);
+  }
+  .ebs-gantt__name, .ebs-gantt__track, .ebs-gantt__pct, .ebs-gantt__span { grid-column: auto; }
+  .ebs-gantt__span { text-align: right; }
+  .ebs-gantt__today { display: block; }
+  .ebs-facts { grid-template-columns: max-content minmax(0, 1fr); gap: var(--eb-sp-2) var(--eb-sp-5); }
+  .ebs-facts dt { margin-top: 0; }
+
+  .ebs-head, .ebs-sec { box-shadow: none; border: 1px solid var(--eb-border); }
+  /* 節そのものは分割を許す(A4 1枚に収まらない節があるため)。
+     壊れると読めなくなる最小単位だけを不可分にする。 */
+  .ebs-head, .ebs-prog, .ebs-gantt, .ebs-gantt__row,
+  .ebs-kb__col, .ebs-bl__item, .ebs-foot {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  .ebs-sec__title { break-after: avoid; page-break-after: avoid; }
+  /* 閉じた <details> の中身も紙には出す(新旧どちらの実装でも開くよう二重に指定) */
+  .ebs-bl__steps > ol { display: block !important; }
+  .ebs-bl__steps::details-content { content-visibility: visible !important; }
+  .ebs-bl__steps > summary::before { transform: none !important; }
+}

@@ -59,7 +59,8 @@
 
   /* --- interaction --- */
   --eb-tap: 44px;                 /* 最小タップ領域 */
-  --eb-motion: 150ms cubic-bezier(.2,.6,.2,1);
+  --eb-ease:   cubic-bezier(.2,.6,.2,1); /* 全アニメで共有する減速カーブ */
+  --eb-motion: 150ms var(--eb-ease);     /* UI の即応(hover/開閉)。尺を変えたい場合もカーブは共有する */
 
   /* --- layout / z --- */
   --eb-sidebar-w: 252px;

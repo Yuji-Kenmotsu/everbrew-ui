@@ -10,11 +10,23 @@ const src = (p) => readFileSync(join(root, "src", p), "utf8");
 
 mkdirSync(join(root, "dist"), { recursive: true });
 
+// --- アプリシェル束(全 GAS アプリが読む) ---
 const css = [src("tokens.css"), src("shell.css"), src("components.css")].join("\n\n");
 const js  = src("shell.js");
 
-writeFileSync(join(root, "dist", "everbrew.css"), css);
-writeFileSync(join(root, "dist", "everbrew.js"), js);
+// --- 進捗ダッシュボード束(型E。render-status.mjs だけが読む) ---
+// shell.css を含めない。ダッシュボード専用の数KBを全アプリに配らないため出力を分ける。
+const statusCss = [src("tokens.css"), src("status.css")].join("\n\n");
+const statusJs  = src("status.js");
 
-console.log("built dist/everbrew.css (%d bytes), dist/everbrew.js (%d bytes)",
-  css.length, js.length);
+const out = {
+  "everbrew.css":        css,
+  "everbrew.js":         js,
+  "everbrew-status.css": statusCss,
+  "everbrew-status.js":  statusJs,
+};
+
+for (const [name, body] of Object.entries(out)) {
+  writeFileSync(join(root, "dist", name), body);
+  console.log("built dist/%s (%d bytes)", name, body.length);
+}

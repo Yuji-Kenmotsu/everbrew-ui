@@ -7,7 +7,10 @@ EVER BREW の全 GAS Web アプリで共有する単一のUI実装(デザイン�
 - `src/tokens.css` … 色・余白・文字・角丸・影・モーションの唯一の定義
 - `src/shell.css` / `src/shell.js` … サイドバー/トップバー/ロゴ/タブ(`<eb-shell>`)
 - `src/components.css` … 共有コンポーネント
+- `src/status.css` / `src/status.js` … 進捗ダッシュボード(型E。1枚もの帳票・`<eb-shell>` 不使用)
 - `dist/` … 結合済み(jsDelivr が `.min` を自動生成)
+  - `everbrew.{css,js}` … tokens + shell + components（全 GAS アプリ用）
+  - `everbrew-status.{css,js}` … tokens + status（進捗ダッシュボード専用。**全アプリには配らない**）
 - `demo/index.html` … 実装を「詰める」場所。iPhone Chrome で確認
 - `scripts/` … 立ち上げ・反映の自動化
 
@@ -18,6 +21,15 @@ EVER BREW の全 GAS Web アプリで共有する単一のUI実装(デザイン�
 ```
 ※ public リポジトリ必須(jsDelivr は private を配信しない)。見た目のみを置き、秘密は入れない。
 ※ ブランチ参照(@main)ではなくタグ(@v1.0.0)に固定し、更新時期は各アプリで制御する。
+
+## 進捗ダッシュボード(型E)
+`~/.claude/scripts/render-status.mjs` が各リポの `docs/status.json` から HTML を決定論的に生成する。
+生成側は色・余白・タイポを持たず、この `everbrew-status.{css,js}` を読み込んでインライン化するだけ。
+
+- DOM 契約の正本は `src/status.css` 冒頭のコメント。**レンダラ側に見た目を持たせない。**
+- `<script>` は `<head>` に置く(本文描画前に `:root.ebs-js` を付けて FOUC を防ぐため)。
+- JS 無効 / 印刷 / `prefers-reduced-motion: reduce` では常に最終状態で出る。
+- 印刷は A4縦。刷り幅(約703px)が `max-width:768px` に入るので、`@media print` 側で多カラム配置に戻している。
 
 ## 使い方(各アプリ)
 ```html
