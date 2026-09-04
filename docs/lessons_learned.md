@@ -54,3 +54,39 @@
 - **対策**: `import { fileURLToPath } from "node:url"` を使い
   `fileURLToPath(new URL("./", import.meta.url))` にする。
   **`~/.claude/scripts/render-status.mjs`（セッションB）でも同じ罠を踏むので注意。**
+
+---
+
+## 2026-09-04 #6 承認済みモック HTML は体裁の正本ではない
+
+- **経緯**: Cowork の出力がリポ直下の `Claude outputs/` に落ちていた
+  （`status-dashboard-mock.html` / 指示書 `.md`）。プロジェクト規約
+  「確認用 HTML は `demo/index.html` 以外に増やさない」に触れるため commit していない。
+- **対応**: `..\_scratch\status-dashboard-mock-v2.html` へ移動し、`.gitignore` に
+  `Claude outputs/` を追加した（出力先設定が直るまでの保険）。
+- **位置づけ**: **見た目の正本は `src/status.css` 冒頭の DOM 契約**。
+  モック HTML は「承認時にどう見えていたか」の記録にすぎない。
+  モックと CSS が食い違ったら CSS を正とし、モックは更新しない。
+
+## 2026-09-04 #7 IntersectionObserver の reveal は「撮影」で消える 【昇格候補】
+
+- **事象**: viewport 1000px でスクロールせずに fullPage スクショを撮ると、
+  下方の節が `opacity:0` のまま写り、2節が丸ごと白紙になった。
+- **原因**: reveal を IO だけに任せていた。人が読むときは必ずスクロールするが、
+  **スクリーンショット・headless の PDF 生成・印刷プレビューはスクロールしない**。
+  `beforeprint` を足しても救えるのは印刷経路だけ。
+- **対策**: ①`DOMContentLoaded` から 1500ms のタイムアウトで未 reveal を強制確定
+  ②`window.ebsRevealAll()` を公開して自動化から1行で確定できるようにする（冪等）
+  ③カウントアップにも中断フラグを持たせ、確定要求後に走行中の rAF が
+  中間値を書き戻さないようにする。
+  **スクロール前提の演出を入れたら「撮られる経路」を必ず1つ用意する。**
+
+## 2026-09-04 #8 `:first-child` は「見た目の先頭」ではなく DOM の先頭
+
+- **事象**: 「最初のグループ行だけ上余白を消す」ための
+  `.ebs-gantt__row--group:first-child` が一度も当たらなかった。
+- **原因**: `.ebs-gantt` の実際の最初の子は `position:absolute` の
+  `.ebs-gantt__today`。浮いていても DOM 上は先頭なので `:first-child` を奪う。
+- **対策**: `.ebs-gantt__today + .ebs-gantt__row--group` を併記する。
+  絶対配置の兄弟がある構造で `:first-child` を使うときは、
+  DOM 順を実測してから書く（`getComputedStyle` で確認できる）。

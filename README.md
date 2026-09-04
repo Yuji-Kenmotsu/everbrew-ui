@@ -27,8 +27,12 @@ EVER BREW の全 GAS Web アプリで共有する単一のUI実装(デザイン�
 生成側は色・余白・タイポを持たず、この `everbrew-status.{css,js}` を読み込んでインライン化するだけ。
 
 - DOM 契約の正本は `src/status.css` 冒頭のコメント。**レンダラ側に見た目を持たせない。**
+  承認済みのモック HTML(`../_scratch/status-dashboard-mock-v2.html`)は
+  「承認時にどう見えていたか」の記録であって**体裁の正本ではない**。食い違ったら CSS が正。
 - `<script>` は `<head>` に置く(本文描画前に `:root.ebs-js` を付けて FOUC を防ぐため)。
 - JS 無効 / 印刷 / `prefers-reduced-motion: reduce` では常に最終状態で出る。
+- スクロールしない撮影・PDF 自動生成では `window.ebsRevealAll()` を呼ぶ(冪等)。
+  呼ばなくても DOMContentLoaded から 1500ms で自動的に最終状態になる。
 - 印刷は A4縦。刷り幅(約703px)が `max-width:768px` に入るので、`@media print` 側で多カラム配置に戻している。
 
 ## 使い方(各アプリ)
