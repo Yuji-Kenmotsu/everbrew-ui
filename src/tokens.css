@@ -33,6 +33,7 @@
 
   /* --- color : semantic --- */
   --eb-ok:    #2f8a57; --eb-ok-soft:    #e9f4ec;
+  --eb-ok-deep: #24704a;  /* ok-soft 面や白面に載せる濃緑。小さい文字でもWCAG準拠 */
   --eb-red:   #c93a2e; --eb-red-soft:   #fbeae8;
   --eb-amber: #b06a12; --eb-amber-soft: #faf0dd;
 

@@ -33,6 +33,7 @@
 
   /* --- color : semantic --- */
   --eb-ok:    #2f8a57; --eb-ok-soft:    #e9f4ec;
+  --eb-ok-deep: #24704a;  /* ok-soft 面や白面に載せる濃緑。小さい文字でもWCAG準拠 */
   --eb-red:   #c93a2e; --eb-red-soft:   #fbeae8;
   --eb-amber: #b06a12; --eb-amber-soft: #faf0dd;
 
@@ -235,8 +236,9 @@
 /* brand 面には濃紺文字(tokens.css の規定)。白文字は載せない */
 .ebs-chip--start { background: var(--eb-brand);      color: var(--eb-brand-ink); }
 /* --end だけ淡いピルにするのは意図的な非対称。--eb-ok 面 + 白文字は 11px 太字だと
-   コントラストが足りないため、面と文字を反転させて可読性を優先する */
-.ebs-chip--end   { background: var(--eb-ok-soft);    color: var(--eb-ok); }
+   コントラストが足りない(4.29:1)ため、面と文字を反転させて可読性を優先する。
+   文字は --eb-ok(3.80:1 で AA 未達)ではなく --eb-ok-deep(5.33:1)を使う */
+.ebs-chip--end   { background: var(--eb-ok-soft);    color: var(--eb-ok-deep); }
 .ebs-chip--type  { background: var(--eb-brand-ring); color: var(--eb-ink-fg); border: 0; }
 
 /* メタ(生成日時 / リポジトリ / HEAD / 記録レベル / status.json の mtime)。暗面の横並び */
@@ -246,8 +248,14 @@
 .ebs-meta dt { color: var(--eb-ink-muted); white-space: nowrap; }
 .ebs-meta dd { margin: 2px 0 0; min-width: 0; color: var(--eb-ink-fg);
   font-family: var(--eb-font-mono); overflow-wrap: anywhere; }
-/* 暗面では --eb-amber が沈むので soft 側を使う(status.json が古い時の警告) */
+/* status.json が古い時の警告。暗面では --eb-amber(4.24:1)が沈み、--eb-amber-soft(16.03:1)は
+   通常の dd(--eb-ink-fg / 16.01:1)と見分けが付かない。色ではなく記号で意味を運ぶ ―
+   白黒印刷でも色覚特性があっても伝わり、16:1 のコントラストも保てる。
+   記号は CSS 側に置く(レンダラは is-warn を付けるだけ)。 */
 .ebs-meta dd.is-warn { color: var(--eb-amber-soft); font-weight: var(--eb-fw-bold); }
+/* U+FE0E は「絵文字ではなくテキスト字形で出せ」の指定。
+   16進エスケープは直後の空白を区切り文字として食うので、字間は margin で取る。 */
+.ebs-meta dd.is-warn::before { content: "\26A0\FE0E"; margin-right: var(--eb-sp-1); }
 
 /* ── セクション ─────────────────────────────────────── */
 .ebs-sec {
@@ -333,8 +341,13 @@
 .ebs-gantt__bar.is-current { background: var(--eb-brand-deep); }
 .ebs-gantt__bar.is-planned { background: var(--eb-text-subtle); opacity: .55; }
 .ebs-gantt__bar.is-late    { background: var(--eb-amber); }
-/* 親(集計)の帯。状態色は付けない ― 親は状態ではなく子の外形を示すだけ */
-.ebs-gantt__bar.is-group   { background: var(--eb-brand-soft); }
+/* 親(集計)の帯。状態色は付けない ― 親は状態ではなく子の外形を示すだけ。
+   --eb-brand は型E で状態色に使っていない唯一のブランド色なので意味が衝突しない
+   (--eb-brand-deep は is-current と同色になり、親が進行中に見えてしまう)。
+   トラックとの比は 2.07:1 で 1.4.11 の 3:1 に届かないが、親子の区別は色だけが
+   担っているのではなく、帯の高さ(6px 対 12px)・子のインデント・親名の太字が併走する。
+   色は補助であり単独の情報伝達手段ではない、という整理で受け入れている。 */
+.ebs-gantt__bar.is-group   { background: var(--eb-brand); }
 .ebs-gantt__pct { font-family: var(--eb-font-disp); font-size: var(--eb-fs-3);
   font-weight: var(--eb-fw-bold); text-align: right; white-space: nowrap; }
 .ebs-gantt__pct span { color: var(--eb-text-subtle); font-size: var(--eb-fs-1); }
