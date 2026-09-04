@@ -109,7 +109,10 @@
                      <circle class="ebs-ring__val"   cx="78" cy="78" r="62"
                              style="--ebs-p:63" data-ring/></svg>
                    <div class="ebs-ring__num"><b data-countup>63</b><span>%</span></div></div>
-                 <dl class="ebs-kpi"><div><dt>…</dt><dd [class="is-ok|is-warn|is-alert"]>…</dd></div>…</dl>
+                 <dl class="ebs-kpi"><div><dt>…</dt><dd [class="is-text|is-ok|is-warn|is-alert"]>…</dd></div>…</dl>
+                 * 値が数値でない KPI(「現在のフェーズ」等)の dd には .is-text を付ける。
+                   主数値の 42px は数値のための寸法で、文字列に当てると折り返してタイルが伸びる。
+                 * KPI の並びは 現在のフェーズ / 残り / 実装済み / 未解決ブロッカー で固定する。
                </div>
        ガント: <div class="ebs-gantt">
                  <div class="ebs-gantt__today" style="--ebs-l:41"><span>今日</span></div>
@@ -150,6 +153,9 @@
                      <dl class="ebs-bl__facts">…</dl>
                      <details class="ebs-bl__steps"><summary>解決手順</summary><ol>…</ol></details>
                    </li>…</ol>
+                 * .ebs-bl__facts は impact / owner / since が全部空なら、
+                   .ebs-bl__steps は steps が空なら、要素ごと省略する(空の <dl> / <details>
+                   は空箱として描画されるため)。中身がある時だけ出す。
 
        <footer class="ebs-foot">…</footer>
      </div>
@@ -165,7 +171,7 @@
 .ebs {
   --ebs-max: 1120px;
   --ebs-gantt-h: var(--eb-sp-3);
-  --ebs-rail: 168px;
+  --ebs-rail: 200px;
   --ebs-pct-w: 56px;
   --ebs-span-w: 148px;
   /* リングの円周(r=62 の 2πr = 389.557)。半径を変えたらここを計算し直す */
@@ -313,6 +319,13 @@
   letter-spacing: var(--eb-tracking-label); color: var(--eb-text-subtle); }
 .ebs-kpi dd { margin: var(--eb-sp-1) 0 0; font-family: var(--eb-font-disp);
   font-size: var(--ebs-num); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); }
+/* 文字値の KPI。--ebs-num は数値のための寸法なので、文字列には当てない。
+   42px のままだとフェーズ名が 4 行に折り返し、タイル 4 枚がそれに揃って伸びる。
+   :first-child 側は暫定 ― レンダラが .is-text を出すまでの間、DOM 契約が
+   KPI の並び順(現在のフェーズ / 残り / 実装済み / 未解決ブロッカー)を固定
+   しているので位置で拾える。レンダラが .is-text を出したらこの行を削除する。 */
+.ebs-kpi dd.is-text,
+.ebs-kpi > div:first-child dd { font-size: var(--eb-fs-5); line-height: var(--eb-lh-tight); }
 .ebs-kpi dd.is-alert { color: var(--eb-red); }
 .ebs-kpi dd.is-warn  { color: var(--eb-amber); }
 .ebs-kpi dd.is-ok    { color: var(--eb-ok); }
@@ -399,7 +412,10 @@
   border-radius: var(--eb-radius-pill); background: var(--eb-brand-deep); }
 
 /* ── カンバン(実装済み / 進行中 / 予定) ─────────────────── */
-.ebs-kb { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--eb-sp-4); }
+/* align-items: start ― 列を最長列に揃えない。3 列の件数差はそのまま高さの差で、
+   stretch させると短い列に数百 px の死んだ余白ができる。 */
+.ebs-kb { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--eb-sp-4);
+  align-items: start; }
 .ebs-kb__col { min-width: 0; background: var(--eb-surface-2);
   border-radius: var(--eb-radius); padding: var(--eb-sp-4); }
 .ebs-kb__head {
