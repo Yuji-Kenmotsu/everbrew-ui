@@ -9,12 +9,19 @@
    status.css の「アニメの初期状態」節と対になっている。片方だけ変えない。
 
    prefers-reduced-motion: reduce のときは ebs-js を付けない。
-   = 初期状態(opacity:0 / width:0)自体が適用されず、常に最終状態で出る。 */
+   = 初期状態(opacity:0 / width:0)自体が適用されず、常に最終状態で出る。
+
+   キャプチャ耐性(reveal はスクロールしないと発火しないため):
+     - DOMContentLoaded から REVEAL_TIMEOUT(1500ms)で未 reveal を強制的に最終状態にする
+     - window.ebsRevealAll() で任意のタイミングから即座に確定できる(冪等)
+     - beforeprint でも同じ処理を通す
+   スクロールしない閲覧・スクリーンショット・headless の PDF 生成はこれで救われる。 */
 (function () {
   "use strict";
 
-  var REVEAL_STAGGER = 40;   /* ms。カードを順に出す間隔 */
-  var COUNT_DURATION = 600;  /* ms。--eb-motion の減速カーブに合わせる */
+  var REVEAL_STAGGER = 40;    /* ms。カードを順に出す間隔 */
+  var COUNT_DURATION = 600;   /* ms。--eb-motion の減速カーブに合わせる */
+  var REVEAL_TIMEOUT = 1500;  /* ms。これを過ぎたら未 reveal を強制的に確定する */
 
   var root = document.documentElement;
   var reduced = !!(window.matchMedia &&
@@ -60,6 +67,9 @@
     el.textContent = fmt(0, decimals, grouped);
 
     function step(now) {
+      /* 途中で確定を要求されたら、その場で最終値にして降りる
+         (印刷・撮影が中間値を拾わないようにするため) */
+      if (el.__ebStop) { el.textContent = raw; return; }
       if (t0 === null) t0 = now;
       var t = Math.min(1, (now - t0) / COUNT_DURATION);
       var eased = 1 - Math.pow(1 - t, 3);   /* ease-out。バーの伸長と揃える */
@@ -74,7 +84,8 @@
   }
 
   function finishCount(el) {
-    if (el.__ebCounted && el.__ebRaw != null) el.textContent = el.__ebRaw;
+    el.__ebStop = true;                     /* 走行中の rAF を次フレームで止める */
+    if (el.__ebRaw != null) el.textContent = el.__ebRaw;
     el.__ebCounted = true;                  /* 以後カウントアップさせない */
   }
 
@@ -89,10 +100,21 @@
       n.classList.add("is-grown");
     });
     each(card.querySelectorAll("[data-countup]"), countUp);
+
+    /* 全部出し切ったら保険のタイマーは要らない */
+    if (revealTimer && !document.querySelector("[data-reveal]:not(.is-in)")) {
+      clearTimeout(revealTimer); revealTimer = null;
+    }
   }
 
-  /* --- 印刷・reduce 用: 全部を即座に最終状態にする -------------------- */
+  /* --- 全部を即座に最終状態にする(冪等) --------------------------------
+     用途: 印刷 / reduce / 1500ms のタイムアウト / window.ebsRevealAll()。
+     reveal はスクロールしないと発火しないので、撮影や PDF 自動生成の受け皿になる。 */
+  var observer = null;
+  var revealTimer = null;
   function finishAll() {
+    if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+    if (observer) { observer.disconnect(); observer = null; }
     each(document.querySelectorAll("[data-reveal]"), function (n) {
       n.__ebActive = true;
       n.classList.add("is-in");
@@ -102,6 +124,9 @@
     });
     each(document.querySelectorAll("[data-countup]"), finishCount);
   }
+
+  /* 自動化から1行で確定させるための公開API。何度呼んでも同じ結果になる。 */
+  window.ebsRevealAll = finishAll;
 
   /* --- 印刷時は <details> を全て開く -----------------------------------
      開閉そのものはネイティブ任せ。ここは「紙に手順を落とさない」ためだけ。 */
@@ -142,7 +167,12 @@
       return;
     }
 
+    /* スクロールされないまま撮られる経路の保険。通常の閲覧では IO が先に発火するので
+       体験は変わらない。ここに来るのは「読まれずに撮られた」ときだけ。 */
+    revealTimer = setTimeout(finishAll, REVEAL_TIMEOUT);
+
     var io = new IntersectionObserver(function (entries) {
+      if (!observer) return;                /* 既に確定済み(finishAll 後)なら何もしない */
       var shown = [];
       entries.forEach(function (en) {
         if (en.isIntersecting) { io.unobserve(en.target); shown.push(en.target); }
@@ -156,6 +186,7 @@
       });
     }, { rootMargin: "0px 0px -8% 0px", threshold: 0.04 });
 
+    observer = io;
     each(cards, function (c) { io.observe(c); });
   });
 })();

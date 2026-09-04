@@ -12,6 +12,9 @@ Thumbs.db
 *.png
 *.log
 
+# Cowork の出力先設定が直るまでの保険(実体は ../_scratch/ へ退避する)
+Claude outputs/
+
 # secrets(このリポジトリは静的UIライブラリで秘密は持たないが念のため)
 .env
 .clasprc.json
