@@ -121,11 +121,21 @@
                  <div class="ebs-gantt__row">
                    <div class="ebs-gantt__name">…</div>
                    <div class="ebs-gantt__track">
-                     <i class="ebs-gantt__bar is-done|is-current|is-planned|is-late"
+                     <i class="ebs-gantt__bar is-done|is-current|is-planned|is-late|is-open"
                         style="--ebs-l:0%;--ebs-w:24%" data-bar></i></div>
                    <div class="ebs-gantt__pct"><b data-countup>100</b><span>%</span></div>
                    <div class="ebs-gantt__span">2026-06-01 → 06-14</div>
                  </div>
+                 * フェーズ名は折り返す(修飾子なし)。__name は rail 幅で改行し、省略記号は出さない。
+                   レンダラ側で短縮・切り詰めをしない ― 説明的なフェーズ名はそのまま渡す。
+                 * is-open = 終了予定が無いフェーズ(継続中)。status が current で end を
+                   持たない時、is-current の**代わりに**付ける(状態色は単一選択で、
+                   両方付けない)。バーは今日まで伸ばし、右端は角丸なし + 面が
+                   transparent へ抜ける(＝「ここから先は未定」)。
+                   この時 __span は 2026-08-27 → （継続） のように書く。
+                   ⚠ end に「今日」や HEAD のコミット日を代入して埋めてはならない
+                     (未実測の値を既知として書かないため)。KPI は「残り」ではなく
+                     「経過」(開始日からの日数)を出す。
 
                  children を持つフェーズ ― 親1行(--group)＋子N行(--child):
                  <div class="ebs-gantt__row ebs-gantt__row--group">
@@ -147,12 +157,21 @@
                    <h3 class="ebs-kb__head">実装済み<b class="ebs-kb__count" data-countup>7</b></h3>
                    <ul class="ebs-kb__list"><li class="ebs-kb__item">…<p class="ebs-kb__note">…</p></li></ul>
                  </section>…</div>
-       ブロッカー: <ol class="ebs-bl"><li class="ebs-bl__item ebs-bl__item--high|--medium|--low [is-resolved]">
+       ブロッカー: <ol class="ebs-bl"><li class="ebs-bl__item ebs-bl__item--high|--medium|--low
+                                          [is-resolved|is-accepted]">
                      <div class="ebs-bl__head"><span class="ebs-bl__sev">HIGH</span>
                        <h3 class="ebs-bl__title">…</h3></div>
                      <dl class="ebs-bl__facts">…</dl>
                      <details class="ebs-bl__steps"><summary>解決手順</summary><ol>…</ol></details>
                    </li>…</ol>
+                 * is-resolved = 直して閉じた項目(左バーが緑・タイトルに打ち消し線)。
+                   is-accepted  = 「対応しない / 直さない / 調査しない / 記録のみ」と
+                   判断して閉じた項目。受容は解決ではないので打ち消し線は付けず、
+                   左バーは無彩色、severity バッジは白面 + 枠線に落ちて「LOW / 受容」と読める。
+                   ⚠ 受容を is-resolved で表さない(直したと読めてしまう)。
+                   ⚠ 未解決件数(KPI「未解決ブロッカー」)から is-accepted は除外する。
+                 * 並び順は 未解決 → 受容済み(is-accepted) → 解決済み(is-resolved)。
+                   並べるのはレンダラの仕事で、CSS は順序を作らない。
                  * .ebs-bl__facts は impact / owner / since が全部空なら、
                    .ebs-bl__steps は steps が空なら、要素ごと省略する(空の <dl> / <details>
                    は空箱として描画されるため)。中身がある時だけ出す。
@@ -171,7 +190,11 @@
 .ebs {
   --ebs-max: 1120px;
   --ebs-gantt-h: var(--eb-sp-3);
-  --ebs-rail: 200px;
+  /* 実データ(draft-generator 6フェーズ)で全行が2行(33.8px)に収まる実測値。
+     名前を折り返す前提の幅なので、狭めると3行になって行が伸びる。
+     ⚠ 実測の母集団は今のところこの1リポだけ。他プロジェクトのフェーズ名が
+       流入したら rail / span を再実測する(lessons #13 / #16)。 */
+  --ebs-rail: 220px;
   --ebs-pct-w: 56px;
   --ebs-span-w: 148px;
   /* リングの円周(r=62 の 2πr = 389.557)。半径を変えたらここを計算し直す */
@@ -321,11 +344,9 @@
   font-size: var(--ebs-num); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); }
 /* 文字値の KPI。--ebs-num は数値のための寸法なので、文字列には当てない。
    42px のままだとフェーズ名が 4 行に折り返し、タイル 4 枚がそれに揃って伸びる。
-   :first-child 側は暫定 ― レンダラが .is-text を出すまでの間、DOM 契約が
-   KPI の並び順(現在のフェーズ / 残り / 実装済み / 未解決ブロッカー)を固定
-   しているので位置で拾える。レンダラが .is-text を出したらこの行を削除する。 */
-.ebs-kpi dd.is-text,
-.ebs-kpi > div:first-child dd { font-size: var(--eb-fs-5); line-height: var(--eb-lh-tight); }
+   位置(:first-child)で拾う暫定ルールは、レンダラが .is-text を出すことを
+   2026-09-04 に実測(draft-generator latest.html)したので削除した。 */
+.ebs-kpi dd.is-text { font-size: var(--eb-fs-5); line-height: var(--eb-lh-tight); }
 .ebs-kpi dd.is-alert { color: var(--eb-red); }
 .ebs-kpi dd.is-warn  { color: var(--eb-amber); }
 .ebs-kpi dd.is-ok    { color: var(--eb-ok); }
@@ -340,8 +361,12 @@
   grid-template-columns: var(--ebs-rail) minmax(0, 1fr) var(--ebs-pct-w) var(--ebs-span-w);
   align-items: center; gap: var(--eb-sp-3);
 }
+/* フェーズ名は省略しない。紙にはホバーが無く、省略記号は情報の消失そのもの。
+   nowrap + ellipsis をやめて折り返しを許し、rail 側を実測値に合わせる(修正15)。
+   行の縦位置は .ebs-gantt__row の align-items: center が保つ。 */
 .ebs-gantt__name { font-weight: var(--eb-fw-medium); font-size: var(--eb-fs-3);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  white-space: normal; overflow: visible; line-height: var(--eb-lh-tight);
+  overflow-wrap: anywhere; }
 .ebs-gantt__track { position: relative; height: var(--ebs-gantt-h);
   background: var(--eb-surface-2); border-radius: var(--eb-radius-pill); }
 .ebs-gantt__bar {
@@ -354,6 +379,15 @@
 .ebs-gantt__bar.is-current { background: var(--eb-brand-deep); }
 .ebs-gantt__bar.is-planned { background: var(--eb-text-subtle); opacity: .55; }
 .ebs-gantt__bar.is-late    { background: var(--eb-amber); }
+/* 終了予定が無い(＝今日まで伸びて、そこから先が未定の)フェーズ。
+   EVER BREW のプロジェクトは多くが「継続」フェーズを持つので、これは例外ではなく常態。
+   右端を閉じた形にしないのが要点 ― 角丸を外し、面を transparent へ抜いて「まだ続く」を示す。
+   色は is-current と同じ --eb-brand-deep から派生させ、新しいトークンは作らない。 */
+.ebs-gantt__bar.is-open {
+  background: linear-gradient(to right,
+    var(--eb-brand-deep) 0%, var(--eb-brand-deep) 55%, transparent 100%);
+  border-top-right-radius: 0; border-bottom-right-radius: 0;
+}
 /* 親(集計)の帯。状態色は付けない ― 親は状態ではなく子の外形を示すだけ。
    --eb-brand は型E で状態色に使っていない唯一のブランド色なので意味が衝突しない
    (--eb-brand-deep は is-current と同色になり、親が進行中に見えてしまう)。
@@ -511,6 +545,35 @@
 .ebs-bl__item.is-resolved::before { background: var(--eb-ok); }
 .ebs-bl__item.is-resolved .ebs-bl__title { text-decoration: line-through; }
 
+/* 「対応しない / 直さない / 調査しない」と決めて閉じた項目。受容は解決ではないので
+   is-resolved とは別扱いにする ― 打ち消し線を付けない(直したと読めてしまう)、
+   左バーは緑(--eb-ok)ではなく無彩色、opacity は .55 より高い .75 にして
+   「対応しないが読む価値はある」を表す。件数から除くのはレンダラの仕事。 */
+.ebs-bl__item.is-accepted { opacity: .75; }
+.ebs-bl__item.is-accepted::before { background: var(--eb-text-subtle); }
+/* severity の面色(赤/橙)を白面 + 枠線に引き下げる。
+   ⚠ 文字色は「opacity で合成された後」の値で選ぶ。上の opacity: .75 は要素と子孫を
+   1枚のレイヤーにして白面へ合成するので、素の色でコントラストを計算すると外す ―
+   --eb-text-muted は素では 6.75:1 だが、.75 合成後は 3.73:1 で AA 未達になる。
+   --eb-text なら合成後 7.67:1 で、同じレイヤーのタイトル(7.51:1)と揃う。 */
+.ebs-bl__item.is-accepted .ebs-bl__sev {
+  background: var(--eb-surface); color: var(--eb-text);
+  border: 1px solid var(--eb-border-strong);
+}
+/* facts の値も同じ理由で引き上げる(--eb-text-muted は .75 合成後 3.63:1)。
+   dt(--eb-text-subtle)と is-resolved(.55)側の AA 未達は本変更より前から在り、
+   opacity で減光する設計そのものの問題なので週次の /知見統合 で扱う。 */
+.ebs-bl__item.is-accepted .ebs-bl__facts dd { color: var(--eb-text); }
+/* 「受容」はレンダラではなく CSS が名乗る(is-resolved の打ち消し線と同じ扱い)。
+   severity の語の後ろに付くので、バッジ1個で「LOW / 受容」と読める。
+   字間を content の先頭空白で取らない ― .ebs-bl__sev は inline-flex なので
+   ::after がフレックス項目になり、先頭の空白は捨てられる(実測で 「LOW/ 受容」になった)。
+   文字は16進エスケープではなくリテラルで書く ―
+   エスケープは桁数が可変で直後の文字を食う事故が起きる(lessons #10)。 */
+.ebs-bl__item.is-accepted .ebs-bl__sev::after {
+  content: "/ 受容"; margin-left: var(--eb-sp-1);
+}
+
 .ebs-bl__none { margin: 0; display: inline-flex; align-items: center; gap: var(--eb-sp-2);
   font-size: var(--eb-fs-3); font-weight: var(--eb-fw-medium); color: var(--eb-ok); }
 
@@ -573,6 +636,12 @@
 }
 
 /* ── 印刷(A4縦。アニメを止め、背景色は残す) ──────────────── */
+/* ⚠ この節の検証は必ず「余白込みの刷り幅」で行う。
+   A4 の紙幅 793.7px から余白を引いた幅が本文幅で、下の @page margin: 12mm なら
+   793.7 - 45.4*2 = 703px、Chrome 既定の 0.4in なら 716.9px になる。
+   余白0(刷り幅 793.7px)では KPI の折り返しなど狭幅由来の破綻が再現しない ―
+   Playwright の page.pdf() は margin の既定値が 0 なので、margin を明示せずに
+   出した PDF での検証は無効。必ず margin を渡す(2026-09-04 セッションC 実測)。 */
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
   .ebs-body { background: var(--eb-surface); }
@@ -587,7 +656,15 @@
 
   /* A4縦の刷り幅は約 703px で max-width:768px の分岐に入ってしまう。
      紙は「狭い画面」ではないので、多カラム配置に戻す(この節が後ろなので勝つ)。 */
-  .ebs { --ebs-rail: 116px; --ebs-pct-w: 44px; --ebs-span-w: 118px;
+  /* rail 116px では実データ 6 行すべてが切れた。折り返しを許した上での実測値は
+     180px(最大3行 / 51px)。トラックはその分狭まるが、名前が読めない紙より良い。
+     span 118px は 2026-04-30 → 05-28(実測 124px)が入らず、v1.5.0 の時点で
+     6 行すべて右端が切れていた。折り返せない mono の日付なので幅で解決する。
+     さらに is-open の 2026-08-27 → （継続）は全角4字ぶん広く実測 139.2px。
+     日付列は行ごとに折り返し位置が変わると読めないので、最長の形に合わせる。
+     144px は 139.2px + 数px の余裕 ― webfont(IBM Plex Mono)が読めない環境では
+     ui-monospace にフォールバックして字幅が変わるので、ぴったりでは切れる。 */
+  .ebs { --ebs-rail: 180px; --ebs-pct-w: 44px; --ebs-span-w: 144px;
     --ebs-num: calc(var(--eb-fs-7) * 1.32); }
   .ebs-head, .ebs-sec { padding: var(--eb-sp-5); }
   .ebs-head__title { font-size: var(--eb-fs-7); }
@@ -615,10 +692,18 @@
   /* 節そのものは分割を許す(A4 1枚に収まらない節があるため)。
      壊れると読めなくなる最小単位だけを不可分にする。 */
   .ebs-head, .ebs-prog, .ebs-gantt, .ebs-gantt__row,
-  .ebs-kb__col, .ebs-bl__item, .ebs-foot {
+  .ebs-bl__item, .ebs-foot {
     break-inside: avoid; page-break-inside: avoid;
   }
   .ebs-sec__title { break-after: avoid; page-break-after: avoid; }
+
+  /* カンバン列は件数に比例して伸びる(実測 4068.5px = A4本文 3.94枚分)ので、
+     avoid を付けても紙の高さを超えた時点でブラウザが無視して途中で切る。
+     不可分の単位を箱ではなく中身の1行に下げる ― 列は分割を許し、項目1件と
+     列ヘッダーだけを守る(2026-09-04 セッションC 実測 / lessons #12)。 */
+  .ebs-kb__col  { break-inside: auto;  page-break-inside: auto; }
+  .ebs-kb__item { break-inside: avoid; page-break-inside: avoid; }
+  .ebs-kb__head { break-after: avoid;  page-break-after: avoid; }
   /* 閉じた <details> の中身も紙には出す(新旧どちらの実装でも開くよう二重に指定) */
   .ebs-bl__steps > ol { display: block !important; }
   .ebs-bl__steps::details-content { content-visibility: visible !important; }
