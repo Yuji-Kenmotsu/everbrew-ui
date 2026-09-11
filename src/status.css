@@ -84,6 +84,8 @@
        カンバン: <div class="ebs-kb"><section class="ebs-kb__col ebs-kb__col--done|--doing|--planned">
                    <h3 class="ebs-kb__head">実装済み<b class="ebs-kb__count" data-countup>7</b></h3>
                    <ul class="ebs-kb__list"><li class="ebs-kb__item">…<p class="ebs-kb__note">…</p></li></ul>
+                 * .ebs-kb__note は white-space: pre-line ― データ(status.json の note)の
+                   改行をそのまま段落の切れ目として出す。連続スペース・インデントは畳む。
                  </section>…</div>
        ブロッカー: <ol class="ebs-bl"><li class="ebs-bl__item ebs-bl__item--high|--medium|--low
                                           [is-resolved|is-accepted]">
@@ -401,7 +403,12 @@
   border-left: 3px solid var(--eb-text-subtle);
   font-size: var(--eb-fs-3); box-shadow: var(--eb-shadow-1);
 }
-.ebs-kb__note { margin: var(--eb-sp-1) 0 0; font-size: var(--eb-fs-2); color: var(--eb-text-muted); }
+/* 現況の1行を経緯から視覚的に切る。データ側(status.json)の改行を保持する。
+   pre-wrap ではなく pre-line ― JSON の値に紛れ込んだ連続スペースやインデントまで
+   画面に出すと、書き手が見えない空白を意識しなければならなくなる。
+   保持するのは改行だけでよい。 */
+.ebs-kb__note { margin: var(--eb-sp-1) 0 0; font-size: var(--eb-fs-2); color: var(--eb-text-muted);
+  white-space: pre-line; }
 .ebs-kb__empty { margin: 0; font-size: var(--eb-fs-2); color: var(--eb-text-subtle); }
 
 .ebs-kb__col--done    .ebs-kb__head  { color: var(--eb-ok); }
