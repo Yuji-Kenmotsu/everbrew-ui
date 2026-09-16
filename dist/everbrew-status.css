@@ -161,15 +161,20 @@
                  * 親の pct = 子の items からの集計%、span = 子の min(start) 〜 max(end)。
                    親自身に start / end / status を持たせない。
                </div>
-       カンバン: <div class="ebs-kb"><section class="ebs-kb__col ebs-kb__col--done|--doing|--planned">
+       カンバン: <div class="ebs-kb"><section class="ebs-kb__col ebs-kb__col--done|--dark|--doing|--planned">
                    <h3 class="ebs-kb__head">実装済み<b class="ebs-kb__count" data-countup>7</b></h3>
-                   <ul class="ebs-kb__list"><li class="ebs-kb__item [ebs-kb__item--dropped|--dark]">…
+                   <ul class="ebs-kb__list"><li class="ebs-kb__item [ebs-kb__item--dropped]">…
                        <p class="ebs-kb__note">…</p></li></ul>
-                 * --dropped = 取り下げ(取り消し線)。--dark = 出荷済みだが本番で動いていない
-                   (items[].live === "no")。別の意味なので見た目を共有しない。
-                   「未稼働」の文字は CSS の ::after が出す ― レンダラは書かない。
-                 * .ebs-kb__note は white-space: pre-line ― データ(status.json の note)の
-                   改行をそのまま段落の切れ目として出す。連続スペース・インデントは畳む。
+                 * 列は4本(実装済み / 未稼働 / 進行中 / 予定)。--dark = 出荷済みだが本番では
+                   動いていない(items[].live === "no")。列そのものが「未稼働」を表すので、
+                   札の側では何も言わない ― 同じことを2回言うと列見出しが情報を持たなくなる。
+                 * --dropped = 取り下げ(取り消し線)。--dark とは別の意味なので見た目を共有しない。
+                 * .ebs-kb__item--dark(札の修飾子)はレンダラが出力しなくなった(2026-09-16)。
+                   規則だけ残してある ― 下の「札の修飾子」の節を参照。
+                 * .ebs-kb__note に入るのは items[].liveNote(なぜ未稼働か)だけ。
+                   items[].note(各実装の詳細)は 2026-09-16 に画面から外した ― 情報は
+                   #eb-status-data の JSON に素で残っている。
+                   white-space: pre-line ― データ側の改行は段落の切れ目として出す。
                  </section>…</div>
        ブロッカー: <ol class="ebs-bl"><li class="ebs-bl__item ebs-bl__item--high|--medium|--low
                                           [is-resolved|is-accepted]">
@@ -459,10 +464,13 @@
 .ebs-bar__fill { display: block; height: 100%; width: var(--ebs-w, 0%);
   border-radius: var(--eb-radius-pill); background: var(--eb-brand-deep); }
 
-/* ── カンバン(実装済み / 進行中 / 予定) ─────────────────── */
-/* align-items: start ― 列を最長列に揃えない。3 列の件数差はそのまま高さの差で、
-   stretch させると短い列に数百 px の死んだ余白ができる。 */
-.ebs-kb { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--eb-sp-4);
+/* ── カンバン(実装済み / 未稼働 / 進行中 / 予定) ───────────── */
+/* align-items: start ― 列を最長列に揃えない。列の件数差はそのまま高さの差で、
+   stretch させると短い列に数百 px の死んだ余白ができる。
+   4 列(2026-09-16。「未稼働」を独立させた)。minmax(0, 1fr) なので列は折り返さず
+   狭くなる ― 増やすほど題名の折り返しが増える。5 列は刷り幅で 1 列 160px 台になり
+   実測で題名が崩れたため上限を 4 とする。 */
+.ebs-kb { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--eb-sp-4);
   align-items: start; }
 .ebs-kb__col { min-width: 0; background: var(--eb-surface-2);
   border-radius: var(--eb-radius); padding: var(--eb-sp-4); }
@@ -481,13 +489,23 @@
 }
 .ebs-kb__list { margin: 0; padding: 0; list-style: none;
   display: flex; flex-direction: column; gap: var(--eb-sp-2); }
+/* overflow-wrap: anywhere ― 札の中身には識別子(AUTO_REPLY_ENABLE / run_retry.py /
+   @sha256:… )が素で入る。日本語は任意の位置で折り返せるが ASCII の長い語は折り返せず、
+   札の箱を突き抜けて隣の列に重なる。実測(2026-09-16 / everbrew-review-system):
+   3 列・画面 1280px でも 1 件が幅 296px の札から 336px まではみ出していた ―
+   4 列にしたから出た問題ではなく、列を狭めて見えるようになった既存の欠陥。
+   break-all ではなく anywhere ― 折り返せる箇所がある限りは語の途中で切らない。 */
 .ebs-kb__item {
   background: var(--eb-surface); border-radius: var(--eb-radius-sm);
   padding: var(--eb-sp-3) var(--eb-sp-4);
   border-left: 3px solid var(--eb-text-subtle);
   font-size: var(--eb-fs-3); box-shadow: var(--eb-shadow-1);
+  overflow-wrap: anywhere;
 }
-/* 現況の1行を経緯から視覚的に切る。データ側(status.json)の改行を保持する。
+/* 札の補足1行。**レンダラが入れるのは items[].liveNote(なぜ未稼働か)だけ**(2026-09-16 以降)。
+   items[].note(各実装の詳細)はここに出さなくなった ― 28 件それぞれに数行付くと
+   カンバンだけで A4 数枚分になり、配布物として読めない長さになっていた。
+   規則を残すのは、この 1 行がまだ liveNote を担っているため。
    pre-wrap ではなく pre-line ― JSON の値に紛れ込んだ連続スペースやインデントまで
    画面に出すと、書き手が見えない空白を意識しなければならなくなる。
    保持するのは改行だけでよい。 */
@@ -498,6 +516,15 @@
 .ebs-kb__col--done    .ebs-kb__head  { color: var(--eb-ok); }
 .ebs-kb__col--done    .ebs-kb__count { background: var(--eb-ok-soft); color: var(--eb-ok); }
 .ebs-kb__col--done    .ebs-kb__item  { border-left-color: var(--eb-ok); }
+/* 「未稼働」列(items[].live === "no")。出荷は生きているので alert 系は当てない ―
+   未稼働は障害ではなく「まだ動かしていない」状態で、赤にすると故障に見える。
+   既存の状態色の体系をそのまま使う(新しいトークンは作らない) ―
+   アンバーは .ebs-kpi dd.is-warn と同じ意味で、2 箇所で「未稼働＝アンバー」が揃う。
+   見出しと件数は --eb-amber ではなく --eb-amber-deep ― 11px 太字は WCAG の
+   「大きい文字」に当たらない。実測 surface-2 面 5.35:1 / amber-soft 面 5.07:1(lessons #9)。 */
+.ebs-kb__col--dark    .ebs-kb__head  { color: var(--eb-amber-deep); }
+.ebs-kb__col--dark    .ebs-kb__count { background: var(--eb-amber-soft); color: var(--eb-amber-deep); }
+.ebs-kb__col--dark    .ebs-kb__item  { border-left-color: var(--eb-amber); }
 .ebs-kb__col--doing   .ebs-kb__head  { color: var(--eb-brand-deep); }
 .ebs-kb__col--doing   .ebs-kb__count { background: var(--eb-brand-soft); color: var(--eb-brand-deep); }
 .ebs-kb__col--doing   .ebs-kb__item  { border-left-color: var(--eb-brand-deep); }
@@ -505,30 +532,21 @@
 .ebs-kb__col--planned .ebs-kb__item  { border-left-color: var(--eb-text-subtle); box-shadow: none; }
 .ebs-kb__item--dropped { opacity: .5; text-decoration: line-through; }
 
-/* 出荷済みだが本番では動いていない項目(封印ゲート OFF / 未デプロイ / スケジューラ停止)。
-   --dropped(取り下げ)とは意味が違うので取り消し線も減光も付けない ― 出荷は生きている。
-   帯は var(--eb-amber) ― .ebs-kpi dd.is-warn と同じトークンにして
-   「未稼働＝アンバー」の意味を 2 箇所で揃える。
+/* ── 札の修飾子: .ebs-kb__item--dark(2026-09-16 以降レンダラは出力しない) ────
+   出荷済みだが本番では動いていない項目(封印ゲート OFF / 未デプロイ / スケジューラ停止)を
+   「実装済み」列の中で区別するための修飾子だった。同日に **列** を分けた
+   (.ebs-kb__col--dark)ので、札の側で同じことを言う必要が無くなった ―
+   列見出しが「未稼働」と言っているところに札のバッジを重ねると、
+   列見出しのほうが情報を持たない飾りに落ちる。
+   ★同日に入れて同日に外した。外した理由は上のとおりで、色・コントラストの問題ではない
+     (::after の「未稼働」バッジは amber-soft 面 5.07:1 で AA を満たしていた)。
+   ★規則を消さずに残す理由 ― status.css はダッシュボード専用ではなく配布している
+     デザインシステムで、--dark は DOM 契約に載せた公開クラスだから。
+     使う側が付ければ従来どおり帯がアンバーになる。
+   帯は var(--eb-amber) ― .ebs-kpi dd.is-warn と同じトークン。
    .ebs-kb__col--done .ebs-kb__item は詳細度 (0,2,0) なので、
    単独クラス (0,1,0) では border-left-color を上書きできない。列を含めた形で書く。 */
 .ebs-kb__col--done .ebs-kb__item--dark { border-left-color: var(--eb-amber); }
-
-/* 「未稼働」の文字は CSS が出す(レンダラは文字を書かない)。
-   ::after は item の末尾 ― note がある項目では note の下、無い項目では見出しの直後に付く。
-   display:block + width:max-content で、どちらでも必ず自分の行に落ちる
-   (inline-block だと note の無い項目だけ見出しと同じ行に回り込み、位置が揃わない)。
-   文字色は --eb-amber ではなく --eb-amber-deep ― 11px 太字は WCAG の「大きい文字」に
-   当たらず、amber-soft 面で 3.78:1 と AA(4.5:1)に届かない(lessons #9 と同じ理由)。
-   --eb-amber-deep は amber-soft 面 5.07:1 / 白面 5.74:1。 */
-.ebs-kb__item--dark::after {
-  content: "未稼働";
-  display: block; width: max-content;
-  margin-top: var(--eb-sp-2); padding: 0 var(--eb-sp-2);
-  border-radius: var(--eb-radius-pill);
-  background: var(--eb-amber-soft); color: var(--eb-amber-deep);
-  font-size: var(--eb-fs-1); font-weight: var(--eb-fw-bold);
-  letter-spacing: var(--eb-tracking-label); line-height: 20px;
-}
 
 /* ── ブロッカー ─────────────────────────────────────── */
 .ebs-bl { margin: 0; padding: 0; list-style: none;
@@ -734,7 +752,7 @@
      ★その4枚での実測: 3+1(4枚目が全幅に伸びる)は basis では解けない ―「実装済み」タイルの
        min-content が 149px あり、3枚で刷り幅 465px を使い切るため。列数を 3 に固定すると
        今度は 149px > (465-24)/3 で数値が溢れる。折り返し任せのままにする。 */
-  .ebs-kb { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ebs-kb { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .ebs-gantt__row {
     grid-template-columns: var(--ebs-rail) minmax(0, 1fr) var(--ebs-pct-w) var(--ebs-span-w);
   }
