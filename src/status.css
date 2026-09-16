@@ -1,6 +1,9 @@
 /* everbrew-ui : status.css
    進捗ダッシュボード(型E)。1枚もの帳票として組む。<eb-shell> は使わない。
    色・余白・角丸・影・タイポ・モーションは tokens.css の変数だけを使い、リテラルを書かない。
+   ★このファイル内の相互参照に**行番号を書かない**。1行足すたびに下の参照が全部ずれ、
+     ずれたまま読まれる(2026-09-16 に3箇所同時に発生)。参照はセレクタ名で書く ―
+     名前なら grep で1箇所に当たり、編集で動かない。
    DOM は render-status.mjs が決定論的に生成する。ここは見た目だけを持つ。
 
    ── DOM 契約(レンダラが守る。ここを正本とする) ───────────────────────────
@@ -41,6 +44,10 @@
                  * 値が数値でない KPI(「現在のフェーズ」等)の dd には .is-text を付ける。
                    主数値の 42px は数値のための寸法で、文字列に当てると折り返してタイルが伸びる。
                  * KPI の並びは 現在のフェーズ / 残り / 実装済み / 未解決ブロッカー で固定する。
+                   5 枚目「稼働中」は items[].live の有無に関わらず**常に出る**。live を1件も
+                   申告していないリポでは値が "—"(.is-text)になるだけで、タイルは消えない。
+                   枚数は flex-wrap 任せ ― 何枚目かで拾うルールは持たない
+                   (経緯は .ebs-kpi dd.is-text の直前のコメント)。
                </div>
        ガント: <div class="ebs-gantt">
                  <div class="ebs-gantt__today" style="--ebs-l:41"><span>今日</span></div>
@@ -83,7 +90,11 @@
                </div>
        カンバン: <div class="ebs-kb"><section class="ebs-kb__col ebs-kb__col--done|--doing|--planned">
                    <h3 class="ebs-kb__head">実装済み<b class="ebs-kb__count" data-countup>7</b></h3>
-                   <ul class="ebs-kb__list"><li class="ebs-kb__item">…<p class="ebs-kb__note">…</p></li></ul>
+                   <ul class="ebs-kb__list"><li class="ebs-kb__item [ebs-kb__item--dropped|--dark]">…
+                       <p class="ebs-kb__note">…</p></li></ul>
+                 * --dropped = 取り下げ(取り消し線)。--dark = 出荷済みだが本番で動いていない
+                   (items[].live === "no")。別の意味なので見た目を共有しない。
+                   「未稼働」の文字は CSS の ::after が出す ― レンダラは書かない。
                  * .ebs-kb__note は white-space: pre-line ― データ(status.json の note)の
                    改行をそのまま段落の切れ目として出す。連続スペース・インデントは畳む。
                  </section>…</div>
@@ -421,6 +432,31 @@
 .ebs-kb__col--planned .ebs-kb__item  { border-left-color: var(--eb-text-subtle); box-shadow: none; }
 .ebs-kb__item--dropped { opacity: .5; text-decoration: line-through; }
 
+/* 出荷済みだが本番では動いていない項目(封印ゲート OFF / 未デプロイ / スケジューラ停止)。
+   --dropped(取り下げ)とは意味が違うので取り消し線も減光も付けない ― 出荷は生きている。
+   帯は var(--eb-amber) ― .ebs-kpi dd.is-warn と同じトークンにして
+   「未稼働＝アンバー」の意味を 2 箇所で揃える。
+   .ebs-kb__col--done .ebs-kb__item は詳細度 (0,2,0) なので、
+   単独クラス (0,1,0) では border-left-color を上書きできない。列を含めた形で書く。 */
+.ebs-kb__col--done .ebs-kb__item--dark { border-left-color: var(--eb-amber); }
+
+/* 「未稼働」の文字は CSS が出す(レンダラは文字を書かない)。
+   ::after は item の末尾 ― note がある項目では note の下、無い項目では見出しの直後に付く。
+   display:block + width:max-content で、どちらでも必ず自分の行に落ちる
+   (inline-block だと note の無い項目だけ見出しと同じ行に回り込み、位置が揃わない)。
+   文字色は --eb-amber ではなく --eb-amber-deep ― 11px 太字は WCAG の「大きい文字」に
+   当たらず、amber-soft 面で 3.78:1 と AA(4.5:1)に届かない(lessons #9 と同じ理由)。
+   --eb-amber-deep は amber-soft 面 5.07:1 / 白面 5.74:1。 */
+.ebs-kb__item--dark::after {
+  content: "未稼働";
+  display: block; width: max-content;
+  margin-top: var(--eb-sp-2); padding: 0 var(--eb-sp-2);
+  border-radius: var(--eb-radius-pill);
+  background: var(--eb-amber-soft); color: var(--eb-amber-deep);
+  font-size: var(--eb-fs-1); font-weight: var(--eb-fw-bold);
+  letter-spacing: var(--eb-tracking-label); line-height: 20px;
+}
+
 /* ── ブロッカー ─────────────────────────────────────── */
 .ebs-bl { margin: 0; padding: 0; list-style: none;
   display: flex; flex-direction: column; gap: var(--eb-sp-3); }
@@ -606,8 +642,25 @@
   .ebs-head__sum   { font-size: var(--eb-fs-4); }
   .ebs-meta { gap: var(--eb-sp-5); margin-top: var(--eb-sp-5); }
   .ebs-prog { gap: var(--eb-sp-6); }
-  /* 刷り幅では基準 120px だと4枚目だけ折り返して横に伸びるので詰める */
-  .ebs-kpi > div { flex: 1 1 96px; }
+  /* KPI の basis は刷り幅でも上書きしない(基準 120px のまま)。
+     旧 96px は「基準 120px だと4枚目だけ折り返して横に伸びる」ために置いたものだが、
+     2026-09-16 に 4枚/5枚 × 刷り幅3種を実測したところ、その前提が成り立っていなかった ―
+       刷り幅 703px(@page margin:12mm ― この節が想定している幅):
+         96px も 120px も 4枚=3+1 / 5枚=3+2 で同一。96px は4枚目の折り返しを1件も直していない。
+       刷り幅 717px(Chrome 既定 0.4in):
+         96px は5枚のとき 4+1 になり、5枚目が 479px まで伸びる。120px なら 3+2 に収まる。
+         つまり 96px は5枚では逆に悪い。
+     5枚のほうを基準に採る ― 詰める理由が無い。
+
+     ★以下の4枚構成は【現行では発生しない ― 直す対象ではない】。
+       現行のレンダラは KPI を常に5枚出す(items[].live の有無に関わらず。冒頭の DOM 契約を参照)。
+       2026-09-16 実測: live を28件すべて外した status.json で生成しても KPI は5枚で、
+       5枚目が "—"(.is-text)になるだけだった(everbrew-review-system)。
+     ★残す理由: 進捗HTML は生成時点の CSS を埋め込む自己完結型なので、2026-09-16 より前に
+       生成して配布済みの版は4枚のまま存在し続ける。その版を印刷したときの挙動の記録として残す。
+     ★その4枚での実測: 3+1(4枚目が全幅に伸びる)は basis では解けない ―「実装済み」タイルの
+       min-content が 149px あり、3枚で刷り幅 465px を使い切るため。列数を 3 に固定すると
+       今度は 149px > (465-24)/3 で数値が溢れる。折り返し任せのままにする。 */
   .ebs-kb { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ebs-gantt__row {
     grid-template-columns: var(--ebs-rail) minmax(0, 1fr) var(--ebs-pct-w) var(--ebs-span-w);

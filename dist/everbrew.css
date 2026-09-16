@@ -36,6 +36,7 @@
   --eb-ok-deep: #24704a;  /* ok-soft 面や白面に載せる濃緑。小さい文字でもWCAG準拠 */
   --eb-red:   #c93a2e; --eb-red-soft:   #fbeae8;
   --eb-amber: #b06a12; --eb-amber-soft: #faf0dd;
+  --eb-amber-deep: #94580e; /* 白/soft 面に載せる濃アンバー。小さい文字でもWCAG準拠 */
 
   /* --- spacing (4px ベースの固定スケール。各実装の裁量を消す) --- */
   --eb-sp-1: 4px;  --eb-sp-2: 8px;  --eb-sp-3: 12px; --eb-sp-4: 16px;
