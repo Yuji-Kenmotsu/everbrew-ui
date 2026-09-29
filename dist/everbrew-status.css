@@ -161,6 +161,45 @@
                  * 親の pct = 子の items からの集計%、span = 子の min(start) 〜 max(end)。
                    親自身に start / end / status を持たせない。
                </div>
+               ⚠ ガントは v1.9.0 で下の「フェーズ進捗」に置き換わる。レンダラが差し替わるまで
+                 現行の HTML が使うので、このタグでは消さない。
+
+       フェーズ進捗(2カラム・日付を使わない。v1.9.0〜。契約の出所は
+         everbrew-claude-config docs/指示_everbrew-ui_フェーズ進捗の2カラム.md @35ded0a):
+               <section class="ebs-sec" data-reveal>
+                 <h2 class="ebs-sec__title">実装フェーズの進捗</h2>
+                 <div class="ebs-ph [ebs-ph--single]">   ← 右カラムが無いときだけ --single
+                   <div class="ebs-ph__main">
+                     <ul class="ebs-ph__list">
+                       <li class="ebs-ph__group">実装</li>   ← 親の見出し。子を持つフェーズだけ
+                       <li class="ebs-ph__row [ebs-ph__row--child] is-current|is-planned">
+                         <div class="ebs-ph__name">…</div>
+                         <div class="ebs-ph__ticks" style="--ebs-n:6">
+                           <i class="ebs-ph__tick is-done"></i>…<i class="ebs-ph__tick"></i></div>
+                         <div class="ebs-ph__count"><b data-countup>3</b><span> / 6</span></div>
+                         <div class="ebs-ph__pct"><b data-countup>50</b><span>%</span></div>
+                       </li>…
+                     </ul>
+                     左が0本のときは ul の代わりに <p class="ebs-ph__empty">進行中のフェーズはありません</p>
+                   </div>
+                   <aside class="ebs-ph__done">          ← done が0本なら要素ごと出さない
+                     <h3 class="ebs-ph__done-title">完了したフェーズ</h3>
+                     <ul class="ebs-ph__done-list">
+                       <li class="ebs-ph__done-group">実装</li>
+                       <li class="ebs-ph__done-item [ebs-ph__done-item--child]">…</li>…
+                     </ul>
+                   </aside>
+                 </div>
+               </section>
+                 * 左 = status が current / planned、右 = done。右は名前だけ(目盛り・% を出さない)。
+                 * 日付・横軸・「今日」の線はこの節に出さない。
+                 * 目盛りの数 = item の実数(dropped を除く)= "/" の右の総数。割合に丸めない。
+                   is-done は完了数だけ左から詰めて付ける。目盛りの幅は件数に関係なく一定で、
+                   入りきらなければ**折り返す**(縮めも間引きもしない ― 数の一致を先に守る)。
+                 * 行の状態は is-current / is-planned の単一選択。親の見出し(__group)に目盛りは無い。
+                   親の見出しは子が入るカラムにだけ出る(左右両方に出ることがある)。
+                 * --ebs-n は目盛りの総数。CSS は使わないがレンダラは出す。
+                 * 並び順は status.json の記載順(レンダラの仕事。CSS は並べ替えない)。
        カンバン: <div class="ebs-kb"><section class="ebs-kb__col ebs-kb__col--done|--dark|--doing|--planned">
                    <h3 class="ebs-kb__head">実装済み<b class="ebs-kb__count" data-countup>7</b></h3>
                    <ul class="ebs-kb__list"><li class="ebs-kb__item [ebs-kb__item--dropped]">…
@@ -216,6 +255,14 @@
   --ebs-rail: 220px;
   --ebs-pct-w: 56px;
   --ebs-span-w: 148px;
+  /* フェーズ進捗の目盛り。幅は件数に依らず一定(フェーズどうしの長さを比べるため)。
+     10px + 間 2px で 24 件 = 286px ― 画面と刷り幅 703px では1行に入る(スマホ幅では折れる)。
+     それを超えたら折り返す(.ebs-ph__ticks の flex-wrap)。 */
+  --ebs-ph-tick-w: 10px;
+  --ebs-ph-tick-gap: 2px;
+  /* 「完了数 / 総数」の列。行ごとの grid なので固定幅にしないと "/" の位置が行で揃わない */
+  --ebs-ph-count-w: 64px;
+  --ebs-ph-done-w: 260px;
   /* リングの円周(r=62 の 2πr = 389.557)。半径を変えたらここを計算し直す */
   --ebs-ring-c: 389.557;
   /* 主数値(リング中央 / KPI タイル)の共通サイズ。4枚を必ず揃える */
@@ -464,6 +511,65 @@
 .ebs-bar__fill { display: block; height: 100%; width: var(--ebs-w, 0%);
   border-radius: var(--eb-radius-pill); background: var(--eb-brand-deep); }
 
+/* ── フェーズ進捗(2カラム。日付を使わない) ─────────────────── */
+/* 左 = 進行中 / 予定(目盛り付き)、右 = 完了(名前だけ)。
+   align-items: start ― 右カラムを左の高さに揃えない(件数差はそのまま高さの差)。 */
+.ebs-ph { display: grid; grid-template-columns: minmax(0, 1fr) var(--ebs-ph-done-w);
+  align-items: start; gap: var(--eb-sp-6); }
+.ebs-ph--single { grid-template-columns: minmax(0, 1fr); }
+.ebs-ph__main { min-width: 0; }
+
+.ebs-ph__list, .ebs-ph__done-list { margin: 0; padding: 0; list-style: none; }
+.ebs-ph__list { display: flex; flex-direction: column; gap: var(--eb-sp-4); }
+
+/* 親の見出し。目盛りを持たない ― 親は集計であって状態ではない(ガントの is-group と同じ整理) */
+.ebs-ph__group { font-family: var(--eb-font-disp); font-weight: var(--eb-fw-bold);
+  font-size: var(--eb-fs-3); line-height: var(--eb-lh-tight); margin-top: var(--eb-sp-2); }
+.ebs-ph__group:first-child { margin-top: 0; }
+
+/* 1行 = 名前(全幅) / 目盛り・件数・%。名前は省略しない(紙にはホバーが無い) */
+.ebs-ph__row { display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ebs-ph-count-w) var(--ebs-pct-w);
+  align-items: center; gap: var(--eb-sp-1) var(--eb-sp-3); }
+.ebs-ph__name { grid-column: 1 / -1; font-weight: var(--eb-fw-medium);
+  line-height: var(--eb-lh-tight); overflow-wrap: anywhere; }
+.ebs-ph__row.is-planned .ebs-ph__name { color: var(--eb-text-muted); }
+.ebs-ph__row--child .ebs-ph__name,
+.ebs-ph__row--child .ebs-ph__ticks { margin-left: var(--eb-sp-5); }
+
+/* 目盛り。1件 = 1個。縮めない・間引かない ― 入りきらなければ折り返す。
+   min-height は item 0 件(空の __ticks)でも行の格子を崩さないため。 */
+.ebs-ph__ticks { display: flex; flex-wrap: wrap; gap: var(--eb-sp-1) var(--ebs-ph-tick-gap);
+  min-width: 0; min-height: var(--ebs-gantt-h); }
+/* 未完了は中抜き、完了は塗り。形で見分けるので色覚・白黒印刷でも読める。
+   枠は --eb-text-muted(白地 6.75:1)。--eb-text-subtle は 2.66:1 で非テキストの 3:1 に届かない。
+   完了にも同色の枠を付ける ― 背景色を落とす印刷設定でも塗りの輪郭が残る。 */
+.ebs-ph__tick { display: block; flex: 0 0 var(--ebs-ph-tick-w);
+  width: var(--ebs-ph-tick-w); height: var(--ebs-gantt-h);
+  border: 1px solid var(--eb-text-muted); border-radius: 2px; background: var(--eb-surface); }
+.ebs-ph__tick.is-done { background: var(--eb-brand-deep); border-color: var(--eb-brand-deep); }
+
+.ebs-ph__count, .ebs-ph__pct { font-family: var(--eb-font-disp); font-size: var(--eb-fs-3);
+  font-weight: var(--eb-fw-bold); text-align: right; white-space: nowrap;
+  font-variant-numeric: tabular-nums; }
+.ebs-ph__count span, .ebs-ph__pct span { color: var(--eb-text-subtle); font-size: var(--eb-fs-1); }
+.ebs-ph__count span { font-weight: var(--eb-fw-medium); }
+
+.ebs-ph__empty { margin: 0; color: var(--eb-text-muted); }
+
+/* 右カラム(完了)。左より一段小さい字。区切りは縦線 */
+.ebs-ph__done { min-width: 0; padding-left: var(--eb-sp-5);
+  border-left: 1px solid var(--eb-border-strong); }
+.ebs-ph__done-title { margin: 0 0 var(--eb-sp-3); font-size: var(--eb-fs-1);
+  font-weight: var(--eb-fw-bold); letter-spacing: var(--eb-tracking-label);
+  color: var(--eb-text-muted); }
+.ebs-ph__done-list { display: flex; flex-direction: column; gap: var(--eb-sp-2);
+  font-size: var(--eb-fs-2); line-height: var(--eb-lh-tight); color: var(--eb-text-muted); }
+.ebs-ph__done-group { font-weight: var(--eb-fw-bold); color: var(--eb-text); margin-top: var(--eb-sp-2); }
+.ebs-ph__done-group:first-child { margin-top: 0; }
+.ebs-ph__done-item { overflow-wrap: anywhere; }
+.ebs-ph__done-item--child { padding-left: var(--eb-sp-4); }
+
 /* ── カンバン(実装済み / 未稼働 / 進行中 / 予定) ───────────── */
 /* align-items: start ― 列を最長列に揃えない。列の件数差はそのまま高さの差で、
    stretch させると短い列に数百 px の死んだ余白ができる。
@@ -665,6 +771,12 @@
   .ebs-gantt__row--child .ebs-gantt__name { padding-left: var(--eb-sp-3); }
   /* 折り返すとトラックの絶対座標が成立しないのでマーカーは隠す */
   .ebs-gantt__today { display: none; }
+  /* フェーズ進捗: 完了カラムを左の下へ落とす。縦線は横線に持ち替える */
+  .ebs-ph { grid-template-columns: minmax(0, 1fr); gap: var(--eb-sp-5); }
+  .ebs-ph__done { padding: var(--eb-sp-4) 0 0; border-left: 0;
+    border-top: 1px solid var(--eb-border-strong); }
+  .ebs-ph__row--child .ebs-ph__name,
+  .ebs-ph__row--child .ebs-ph__ticks { margin-left: var(--eb-sp-3); }
   .ebs-facts { grid-template-columns: minmax(0, 1fr); gap: var(--eb-sp-1); }
   .ebs-facts dt { margin-top: var(--eb-sp-2); }
 }
@@ -761,6 +873,15 @@
   .ebs-gantt__today { display: block; }
   /* 紙でも親子の区別を残す(インデントと帯の細さ) */
   .ebs-gantt__row--child .ebs-gantt__name { padding-left: var(--eb-sp-5); }
+  /* フェーズ進捗は紙では2カラムに戻す。右カラムを 180px に詰めて、左に目盛り 24 件
+     (286px)+ 件数 + % が子の行(インデント 24px)でも1行で入る幅を残す。
+     実測(刷り幅 703px): 200px だと子の行の目盛り欄が 273px で 24 件が2行に折れた。 */
+  .ebs-ph { grid-template-columns: minmax(0, 1fr) 180px; gap: var(--eb-sp-5); }
+  .ebs-ph--single { grid-template-columns: minmax(0, 1fr); }
+  .ebs-ph__done { padding: 0 0 0 var(--eb-sp-4); border-top: 0;
+    border-left: 1px solid var(--eb-border-strong); }
+  .ebs-ph__row--child .ebs-ph__name,
+  .ebs-ph__row--child .ebs-ph__ticks { margin-left: var(--eb-sp-5); }
   .ebs-facts { grid-template-columns: max-content minmax(0, 1fr); gap: var(--eb-sp-2) var(--eb-sp-5); }
   .ebs-facts dt { margin-top: 0; }
 
@@ -783,6 +904,11 @@
   .ebs-kb__col  { break-inside: auto;  page-break-inside: auto; }
   .ebs-kb__item { break-inside: avoid; page-break-inside: avoid; }
   .ebs-kb__head { break-after: avoid;  page-break-after: avoid; }
+  /* フェーズ進捗も同じ考え方。左右のカラムは件数で伸びるので分割を許し、
+     1行(目盛り込み)と見出しだけを不可分にする。 */
+  .ebs-ph__row, .ebs-ph__done-item { break-inside: avoid; page-break-inside: avoid; }
+  .ebs-ph__group, .ebs-ph__done-group, .ebs-ph__done-title {
+    break-after: avoid; page-break-after: avoid; }
   /* 閉じた <details> の中身も紙には出す(新旧どちらの実装でも開くよう二重に指定) */
   .ebs-bl__steps > ol { display: block !important; }
   .ebs-bl__steps::details-content { content-visibility: visible !important; }
