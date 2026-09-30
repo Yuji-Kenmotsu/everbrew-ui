@@ -196,6 +196,18 @@
                  * 目盛りの数 = item の実数(dropped を除く)= "/" の右の総数。割合に丸めない。
                    is-done は完了数だけ左から詰めて付ける。目盛りの幅は件数に関係なく一定で、
                    入りきらなければ**折り返す**(縮めも間引きもしない ― 数の一致を先に守る)。
+                 * 見た目(v1.10.0〜): __ticks は1本のバー。__tick はその隙間の無いセグメントで、
+                   区切りは 1px の罫(各セグメントが左右両辺に持ち、隣と 1px 重ねて1本にする)、
+                   先頭/末尾だけ外側の角が丸い。トラックの面と外枠は
+                   セグメント側が持つ(コンテナに敷くと折り返し時に空のトラックが伸びるため)。
+                   完了の塗りは __tick.is-done::before(縦グラデーション + 下端の暗いエッジ
+                   --ebs-ph-edge)。is-current の行は最後の完了セグメントの右端が明るい。
+                   高さは --ebs-ph-bar-h(--ebs-gantt-h と共有しない)。
+                 * アニメ: 発火は節の [data-reveal].is-in(status.js に専用の印は無い)。
+                   ::before を scaleX(0)→1 + opacity で左から stagger。width は動かさない。
+                   尺は --ebs-t-grow から calc で導く(直すのは --ebs-t-grow の1箇所だけ)。
+                 * この節のセレクタは :has() に依存しない(隣接結合子 + で書ける形にしてある)。
+                   閲覧・PDF 生成はどちらも Chrome が前提。
                  * 行の状態は is-current / is-planned の単一選択。親の見出し(__group)に目盛りは無い。
                    親の見出しは子が入るカラムにだけ出る(左右両方に出ることがある)。
                  * --ebs-n は目盛りの総数。CSS は使わないがレンダラは出す。
@@ -255,11 +267,21 @@
   --ebs-rail: 220px;
   --ebs-pct-w: 56px;
   --ebs-span-w: 148px;
-  /* フェーズ進捗の目盛り。幅は件数に依らず一定(フェーズどうしの長さを比べるため)。
-     10px + 間 2px で 24 件 = 286px ― 画面と刷り幅 703px では1行に入る(スマホ幅では折れる)。
-     それを超えたら折り返す(.ebs-ph__ticks の flex-wrap)。 */
+  /* フェーズ進捗のバー。セグメント1本 = item 1件で、幅は件数に依らず一定
+     (フェーズどうしの長さを比べるため)。セグメント間に隙間は無く、区切りは 1px の罫。
+     10px × 24 件 = 240px ― 画面と刷り幅 703px では1行に入る(スマホ幅では折れる)。
+     それを超えたら折り返す(.ebs-ph__ticks の flex-wrap)。
+     高さは --ebs-gantt-h と共有しない ― ガントとは別物なので寸法を結合しない。 */
   --ebs-ph-tick-w: 10px;
-  --ebs-ph-tick-gap: 2px;
+  --ebs-ph-bar-h: 14px;
+  /* 完了セグメントの下端の暗いエッジ。背景を落とす印刷でもこの太さだけは残り、
+     未完了(1px)と形で見分けられる ― 色だけに依らせないための寸法。 */
+  --ebs-ph-edge: 3px;
+  /* 完了セグメントの stagger。--ebs-t-grow から導く ― 尺を変えるときは --ebs-t-grow だけを直す。
+     1本の尺 = 3/7、間隔 = 4/70 で、1本の尺 + 間隔 × 10(最大遅延)= --ebs-t-grow ちょうど。
+     11本目以降は最大遅延に丸める(.ebs-ph__tick:nth-child の節の --ebs-ph-i 上限 10 と対)。 */
+  --ebs-ph-seg-t: calc(var(--ebs-t-grow) * 3 / 7);
+  --ebs-ph-seg-step: calc(var(--ebs-t-grow) * 4 / 70);
   /* 「完了数 / 総数」の列。行ごとの grid なので固定幅にしないと "/" の位置が行で揃わない */
   --ebs-ph-count-w: 64px;
   --ebs-ph-done-w: 260px;
@@ -537,17 +559,57 @@
 .ebs-ph__row--child .ebs-ph__name,
 .ebs-ph__row--child .ebs-ph__ticks { margin-left: var(--eb-sp-5); }
 
-/* 目盛り。1件 = 1個。縮めない・間引かない ― 入りきらなければ折り返す。
-   min-height は item 0 件(空の __ticks)でも行の格子を崩さないため。 */
-.ebs-ph__ticks { display: flex; flex-wrap: wrap; gap: var(--eb-sp-1) var(--ebs-ph-tick-gap);
-  min-width: 0; min-height: var(--ebs-gantt-h); }
-/* 未完了は中抜き、完了は塗り。形で見分けるので色覚・白黒印刷でも読める。
-   枠は --eb-text-muted(白地 6.75:1)。--eb-text-subtle は 2.66:1 で非テキストの 3:1 に届かない。
-   完了にも同色の枠を付ける ― 背景色を落とす印刷設定でも塗りの輪郭が残る。 */
-.ebs-ph__tick { display: block; flex: 0 0 var(--ebs-ph-tick-w);
-  width: var(--ebs-ph-tick-w); height: var(--ebs-gantt-h);
-  border: 1px solid var(--eb-text-muted); border-radius: 2px; background: var(--eb-surface); }
-.ebs-ph__tick.is-done { background: var(--eb-brand-deep); border-color: var(--eb-brand-deep); }
+/* バー。1件 = セグメント1本。縮めない・間引かない ― 入りきらなければ折り返す。
+   横の gap は 0(区切りは罫で出す)、縦の gap は折り返した段の間だけに効く。
+   min-height は item 0 件(空の __ticks)でも行の格子を崩さないため。
+   ⚠ トラックの面・枠はコンテナではなくセグメント側に持たせる。コンテナに敷くと
+     折り返したとき最終段の右に空のトラックが伸び、「未完了がまだある」と読めてしまう
+     (数の一致を先に守る)。 */
+.ebs-ph__ticks { display: flex; flex-wrap: wrap; gap: var(--eb-sp-1) 0;
+  min-width: 0; min-height: var(--ebs-ph-bar-h); }
+/* 未完了 = トラック(淡い面 + 外枠)。外枠は --eb-text-muted(白地 6.75:1)。
+   --eb-text-subtle(2.66:1)は区切りの罫にだけ使う ― 本数は右の件数でも読めるので
+   罫は補助で、非テキストの 3:1 を負うのは外枠のほう。
+   区切りの罫は各セグメントが**左右両辺**に持ち、margin-left: -1px で隣と1本に重ねる
+   (重なった罫は後ろの兄弟が上に塗る ― 区切りの色は右側のセグメントの左罫で決まる)。
+   折り返した段の端は CSS で検出できない(:first-child / :last-child は文書順の1本だけ)ので、
+   どの1本も両辺に罫を持たせて、段の左端・右端のどちらでも枠が開かないようにする。
+   幅は 1px 重ねる分を足して tick-w + 1px、コンテナの padding-left: 1px で先頭の食い込みを吸収する
+   (ピッチは tick-w のまま = 24 件で 240px + 1px)。
+   先頭/末尾だけ外側の角を丸め、外枠の色(muted)にする。 */
+.ebs-ph__ticks { padding-left: 1px; }
+.ebs-ph__tick { position: relative; display: block;
+  flex: 0 0 calc(var(--ebs-ph-tick-w) + 1px); width: calc(var(--ebs-ph-tick-w) + 1px);
+  height: var(--ebs-ph-bar-h); margin-left: -1px;
+  background: var(--eb-surface-2);
+  border: 1px solid var(--eb-text-muted);
+  border-left-color: var(--eb-text-subtle); border-right-color: var(--eb-text-subtle); }
+.ebs-ph__tick:first-child { border-left-color: var(--eb-text-muted);
+  border-top-left-radius: var(--eb-radius-sm); border-bottom-left-radius: var(--eb-radius-sm); }
+.ebs-ph__tick:last-child { border-right-color: var(--eb-text-muted);
+  border-top-right-radius: var(--eb-radius-sm); border-bottom-right-radius: var(--eb-radius-sm); }
+/* 完了 = 塗り。塗りは ::before に持たせ、セグメント本体(トラック)は残す ―
+   アニメで塗りだけを伸ばすため。::before はセグメントの枠(四辺)の上まで覆い、
+   塗りの左右の輪郭は --eb-brand-deeper。完了どうしの区切りは右側の ::before の左罫が上に乗る。
+   最後の1本が完了のときも右端は左端と同じ deeper で閉じる(外枠の muted と混ぜない)。
+   brand-deep 基調の縦グラデーション(上端を --eb-brand 側へ少し明るく)+ 下端の暗いエッジ。
+   白黒印刷: 塗りは暗いグレー、トラックはほぼ白 ― 明度差で読める。
+   背景を落とす印刷: 塗りは消えるが下端の --ebs-ph-edge(3px)は border なので残り、
+   未完了の下端 1px と太さで見分けられる(色だけに依らせない)。 */
+.ebs-ph__tick.is-done::before { content: ""; position: absolute;
+  top: -1px; right: -1px; bottom: -1px; left: -1px;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, var(--eb-brand) -60%, var(--eb-brand-deep) 55%);
+  border-left: 1px solid var(--eb-brand-deeper); border-right: 1px solid var(--eb-brand-deeper);
+  border-bottom: var(--ebs-ph-edge) solid var(--eb-brand-deeper); }
+/* 進行中の行だけ、最後の完了セグメントの右端を明るくして「ここまで来ている」を示す。
+   右端 = 次の未完了セグメントの左罫(重なりの上に乗る側)なので、その罫を明るくする
+   (:has() を使わずに済む)。
+   全部完了なら最後の1本の右外枠を明るくする。点滅・ループはしない(紙と撮影で意味を持たないため)。 */
+.ebs-ph__row.is-current .ebs-ph__tick.is-done + .ebs-ph__tick:not(.is-done) {
+  border-left-color: var(--eb-brand); }
+.ebs-ph__row.is-current .ebs-ph__tick.is-done:last-child::before {
+  border-right-color: var(--eb-brand); }
 
 .ebs-ph__count, .ebs-ph__pct { font-family: var(--eb-font-disp); font-size: var(--eb-fs-3);
   font-weight: var(--eb-fw-bold); text-align: right; white-space: nowrap;
@@ -798,6 +860,28 @@
   stroke-dashoffset: calc(var(--ebs-ring-c) * (1 - var(--ebs-p, 0) / 100));
   transition: stroke-dashoffset var(--ebs-t-ring) var(--eb-ease);
 }
+/* フェーズ進捗の完了セグメント。status.js に印を足さず、節の [data-reveal].is-in に乗せる。
+   動かすのは ::before の transform と opacity だけ ― width を動かすとレイアウトが起き、
+   件数表示が揺れる。左から順に stagger し、11本目以降は最大遅延に丸める
+   (実データ最長は draft-generator p6 = 11本。総尺 = seg-t + step × 10 ≦ 700ms)。 */
+.ebs-js .ebs-sec[data-reveal] .ebs-ph__tick.is-done::before {
+  transform: scaleX(0); transform-origin: left; opacity: 0; }
+.ebs-js .ebs-sec[data-reveal].is-in .ebs-ph__tick.is-done::before {
+  transform: none; opacity: 1;
+  transition: transform var(--ebs-ph-seg-t) var(--eb-ease),
+              opacity var(--ebs-ph-seg-t) var(--eb-ease);
+  transition-delay: calc(var(--ebs-ph-i, 0) * var(--ebs-ph-seg-step));
+}
+.ebs-ph__tick:nth-child(2)  { --ebs-ph-i: 1; }
+.ebs-ph__tick:nth-child(3)  { --ebs-ph-i: 2; }
+.ebs-ph__tick:nth-child(4)  { --ebs-ph-i: 3; }
+.ebs-ph__tick:nth-child(5)  { --ebs-ph-i: 4; }
+.ebs-ph__tick:nth-child(6)  { --ebs-ph-i: 5; }
+.ebs-ph__tick:nth-child(7)  { --ebs-ph-i: 6; }
+.ebs-ph__tick:nth-child(8)  { --ebs-ph-i: 7; }
+.ebs-ph__tick:nth-child(9)  { --ebs-ph-i: 8; }
+.ebs-ph__tick:nth-child(10) { --ebs-ph-i: 9; }
+.ebs-ph__tick:nth-child(n+11) { --ebs-ph-i: 10; }
 
 /* ── モーション抑制 ─────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
@@ -807,6 +891,7 @@
   .ebs-js [data-reveal] { opacity: 1 !important; transform: none !important; }
   .ebs-js [data-bar]    { width: var(--ebs-w, 0%) !important; }
   .ebs-js [data-ring]   { stroke-dashoffset: calc(var(--ebs-ring-c) * (1 - var(--ebs-p, 0) / 100)) !important; }
+  .ebs-js .ebs-ph__tick.is-done::before { transform: none !important; opacity: 1 !important; }
 }
 
 /* ── 印刷(A4縦。アニメを止め、背景色は残す) ──────────────── */
@@ -827,6 +912,7 @@
   .ebs-js [data-reveal] { opacity: 1 !important; transform: none !important; }
   .ebs-js [data-bar]    { width: var(--ebs-w, 0%) !important; }
   .ebs-js [data-ring]   { stroke-dashoffset: calc(var(--ebs-ring-c) * (1 - var(--ebs-p, 0) / 100)) !important; }
+  .ebs-js .ebs-ph__tick.is-done::before { transform: none !important; opacity: 1 !important; }
 
   /* A4縦の刷り幅は約 703px で max-width:768px の分岐に入ってしまう。
      紙は「狭い画面」ではないので、多カラム配置に戻す(この節が後ろなので勝つ)。 */
@@ -873,9 +959,10 @@
   .ebs-gantt__today { display: block; }
   /* 紙でも親子の区別を残す(インデントと帯の細さ) */
   .ebs-gantt__row--child .ebs-gantt__name { padding-left: var(--eb-sp-5); }
-  /* フェーズ進捗は紙では2カラムに戻す。右カラムを 180px に詰めて、左に目盛り 24 件
-     (286px)+ 件数 + % が子の行(インデント 24px)でも1行で入る幅を残す。
-     実測(刷り幅 703px): 200px だと子の行の目盛り欄が 273px で 24 件が2行に折れた。 */
+  /* フェーズ進捗は紙では2カラムに戻す。右カラムを 180px に詰めて、左にバー 24 件
+     + 件数 + % が子の行(インデント 24px)でも1行で入る幅を残す。
+     実測(刷り幅 703px・v1.9.0 の 10px+間2px = 286px 時代): 200px だと子の行の
+     目盛り欄が 273px で 24 件が2行に折れた。v1.10.0 で間を 0 にして 24 件 = 240px。 */
   .ebs-ph { grid-template-columns: minmax(0, 1fr) 180px; gap: var(--eb-sp-5); }
   .ebs-ph--single { grid-template-columns: minmax(0, 1fr); }
   .ebs-ph__done { padding: 0 0 0 var(--eb-sp-4); border-top: 0;
