@@ -194,8 +194,9 @@
                  * 左 = status が current / planned、右 = done。右は名前だけ(目盛り・% を出さない)。
                  * 日付・横軸・「今日」の線はこの節に出さない。
                  * 目盛りの数 = item の実数(dropped を除く)= "/" の右の総数。割合に丸めない。
-                   is-done は完了数だけ左から詰めて付ける。目盛りの幅は件数に関係なく一定で、
-                   入りきらなければ**折り返す**(縮めも間引きもしない ― 数の一致を先に守る)。
+                   is-done は完了数だけ左から詰めて付ける。目盛りは行の幅を本数で等分し
+                   (v1.10.1〜。バーの右端は件数の列の手前)、最小幅 --ebs-ph-tick-w を割る本数のときだけ
+                   **折り返す**(間引かない ― 数の一致を先に守る)。
                  * 見た目(v1.10.0〜): __ticks は1本のバー。__tick はその隙間の無いセグメントで、
                    区切りは 1px の罫(各セグメントが左右両辺に持ち、隣と 1px 重ねて1本にする)、
                    先頭/末尾だけ外側の角が丸い。トラックの面と外枠は
@@ -205,12 +206,13 @@
                    高さは --ebs-ph-bar-h(--ebs-gantt-h と共有しない)。
                  * アニメ: 発火は節の [data-reveal].is-in(status.js に専用の印は無い)。
                    ::before を scaleX(0)→1 + opacity で左から stagger。width は動かさない。
-                   尺は --ebs-t-grow から calc で導く(直すのは --ebs-t-grow の1箇所だけ)。
+                   尺は進捗バー専用の --ebs-t-ph(満了の1本が塗り終わるまで)。本数 --ebs-n で割って
+                   左端から右端まで一定の速さで塗る(v1.10.1〜。--ebs-t-grow とは切り離した)。
                  * この節のセレクタは :has() に依存しない(隣接結合子 + で書ける形にしてある)。
                    閲覧・PDF 生成はどちらも Chrome が前提。
                  * 行の状態は is-current / is-planned の単一選択。親の見出し(__group)に目盛りは無い。
                    親の見出しは子が入るカラムにだけ出る(左右両方に出ることがある)。
-                 * --ebs-n は目盛りの総数。CSS は使わないがレンダラは出す。
+                 * --ebs-n は目盛りの総数。CSS はアニメの間隔の計算にだけ使う(v1.10.1〜)。
                  * 並び順は status.json の記載順(レンダラの仕事。CSS は並べ替えない)。
        カンバン: <div class="ebs-kb"><section class="ebs-kb__col ebs-kb__col--done|--dark|--doing|--planned">
                    <h3 class="ebs-kb__head">実装済み<b class="ebs-kb__count" data-countup>7</b></h3>
@@ -267,9 +269,9 @@
   --ebs-rail: 220px;
   --ebs-pct-w: 56px;
   --ebs-span-w: 148px;
-  /* フェーズ進捗のバー。セグメント1本 = item 1件で、幅は件数に依らず一定
-     (フェーズどうしの長さを比べるため)。セグメント間に隙間は無く、区切りは 1px の罫。
-     10px × 24 件 = 240px ― 画面と刷り幅 703px では1行に入る(スマホ幅では折れる)。
+  /* フェーズ進捗のバー。セグメント1本 = item 1件で、行の幅を本数で等分する(v1.10.1〜)。
+     tick-w はセグメントの**最小幅**。セグメント間に隙間は無く、区切りは 1px の罫。
+     最小幅 10px × 24 件 = 240px ― 画面と刷り幅 703px では1行に入る(スマホ幅では折れる)。
      それを超えたら折り返す(.ebs-ph__ticks の flex-wrap)。
      高さは --ebs-gantt-h と共有しない ― ガントとは別物なので寸法を結合しない。 */
   --ebs-ph-tick-w: 10px;
@@ -277,11 +279,18 @@
   /* 完了セグメントの下端の暗いエッジ。背景を落とす印刷でもこの太さだけは残り、
      未完了(1px)と形で見分けられる ― 色だけに依らせないための寸法。 */
   --ebs-ph-edge: 3px;
-  /* 完了セグメントの stagger。--ebs-t-grow から導く ― 尺を変えるときは --ebs-t-grow だけを直す。
-     1本の尺 = 3/7、間隔 = 4/70 で、1本の尺 + 間隔 × 10(最大遅延)= --ebs-t-grow ちょうど。
-     11本目以降は最大遅延に丸める(.ebs-ph__tick:nth-child の節の --ebs-ph-i 上限 10 と対)。 */
-  --ebs-ph-seg-t: calc(var(--ebs-t-grow) * 3 / 7);
-  --ebs-ph-seg-step: calc(var(--ebs-t-grow) * 4 / 70);
+  /* 完了セグメントの stagger。進捗バー専用の尺 --ebs-t-ph から導く(--ebs-t-grow とは共有しない)。
+     --ebs-t-ph = 満了の1本が左端から右端まで塗り終わる時間。尺を変えるときはここだけを直す。
+     セグメントの幅は 1/n なので、間隔も本数 --ebs-n で割る ― 左から一定の速さで塗れ、
+     本数が増えても総尺は伸びない(1本の尺 + 間隔 × (n-1) = --ebs-t-ph)。進捗 50% の行は約半分の時間で止まる。
+     1本の尺 = --ebs-t-ph × 3 / n(下限 --ebs-ph-seg-min・上限 --ebs-t-ph)。1本だけの行は --ebs-t-ph かけて伸びる。
+     --ebs-ph-i は nth-child で 24 本目まで振り、25 本目以降は 24 に丸める(.ebs-ph__tick:nth-child の節と対)。
+     丸めても間隔が n で割ってあるので遅延は --ebs-t-ph を超えない。
+     --ebs-n は __ticks に載る(レンダラが出す)。欠けたときは 24 本とみなす。
+     seg-t / step の式は .ebs-ph__ticks の規則に置く ― ここ(:root 側)で var(--ebs-n) を参照すると、
+     ここで解決されて行ごとの本数が効かない(カスタムプロパティの var() は宣言した要素で解決される)。 */
+  --ebs-t-ph: 1400ms;
+  --ebs-ph-seg-min: 360ms;
   /* 「完了数 / 総数」の列。行ごとの grid なので固定幅にしないと "/" の位置が行で揃わない */
   --ebs-ph-count-w: 64px;
   --ebs-ph-done-w: 260px;
@@ -574,12 +583,16 @@
    (重なった罫は後ろの兄弟が上に塗る ― 区切りの色は右側のセグメントの左罫で決まる)。
    折り返した段の端は CSS で検出できない(:first-child / :last-child は文書順の1本だけ)ので、
    どの1本も両辺に罫を持たせて、段の左端・右端のどちらでも枠が開かないようにする。
-   幅は 1px 重ねる分を足して tick-w + 1px、コンテナの padding-left: 1px で先頭の食い込みを吸収する
-   (ピッチは tick-w のまま = 24 件で 240px + 1px)。
+   幅は行を等分(flex: 1 1 0)。最小幅は 1px 重ねる分を足して tick-w + 1px、
+   コンテナの padding-left: 1px で先頭の食い込みを吸収する(最小ピッチは tick-w = 24 件で 240px + 1px)。
+   折り返したときは各段がそれぞれ行の幅いっぱいに伸びる(最終段のセグメントは他の段より太くなりうる ―
+   空のトラックを残さないことを優先する。#21)。
    先頭/末尾だけ外側の角を丸め、外枠の色(muted)にする。 */
-.ebs-ph__ticks { padding-left: 1px; }
+.ebs-ph__ticks { padding-left: 1px;
+  --ebs-ph-seg-t: clamp(var(--ebs-ph-seg-min), calc(var(--ebs-t-ph) * 3 / var(--ebs-n, 24)), var(--ebs-t-ph));
+  --ebs-ph-seg-step: calc((var(--ebs-t-ph) - var(--ebs-ph-seg-t)) / max(var(--ebs-n, 24) - 1, 1)); }
 .ebs-ph__tick { position: relative; display: block;
-  flex: 0 0 calc(var(--ebs-ph-tick-w) + 1px); width: calc(var(--ebs-ph-tick-w) + 1px);
+  flex: 1 1 0; min-width: calc(var(--ebs-ph-tick-w) + 1px);
   height: var(--ebs-ph-bar-h); margin-left: -1px;
   background: var(--eb-surface-2);
   border: 1px solid var(--eb-text-muted);
@@ -862,8 +875,8 @@
 }
 /* フェーズ進捗の完了セグメント。status.js に印を足さず、節の [data-reveal].is-in に乗せる。
    動かすのは ::before の transform と opacity だけ ― width を動かすとレイアウトが起き、
-   件数表示が揺れる。左から順に stagger し、11本目以降は最大遅延に丸める
-   (実データ最長は draft-generator p6 = 11本。総尺 = seg-t + step × 10 ≦ 700ms)。 */
+   件数表示が揺れる。左から順に stagger する。間隔は本数で割るので総尺は本数に依らず
+   --ebs-t-ph 以内(25本目以降の丸めは :root の節を参照)。 */
 .ebs-js .ebs-sec[data-reveal] .ebs-ph__tick.is-done::before {
   transform: scaleX(0); transform-origin: left; opacity: 0; }
 .ebs-js .ebs-sec[data-reveal].is-in .ebs-ph__tick.is-done::before {
@@ -881,7 +894,21 @@
 .ebs-ph__tick:nth-child(8)  { --ebs-ph-i: 7; }
 .ebs-ph__tick:nth-child(9)  { --ebs-ph-i: 8; }
 .ebs-ph__tick:nth-child(10) { --ebs-ph-i: 9; }
-.ebs-ph__tick:nth-child(n+11) { --ebs-ph-i: 10; }
+.ebs-ph__tick:nth-child(11) { --ebs-ph-i: 10; }
+.ebs-ph__tick:nth-child(12) { --ebs-ph-i: 11; }
+.ebs-ph__tick:nth-child(13) { --ebs-ph-i: 12; }
+.ebs-ph__tick:nth-child(14) { --ebs-ph-i: 13; }
+.ebs-ph__tick:nth-child(15) { --ebs-ph-i: 14; }
+.ebs-ph__tick:nth-child(16) { --ebs-ph-i: 15; }
+.ebs-ph__tick:nth-child(17) { --ebs-ph-i: 16; }
+.ebs-ph__tick:nth-child(18) { --ebs-ph-i: 17; }
+.ebs-ph__tick:nth-child(19) { --ebs-ph-i: 18; }
+.ebs-ph__tick:nth-child(20) { --ebs-ph-i: 19; }
+.ebs-ph__tick:nth-child(21) { --ebs-ph-i: 20; }
+.ebs-ph__tick:nth-child(22) { --ebs-ph-i: 21; }
+.ebs-ph__tick:nth-child(23) { --ebs-ph-i: 22; }
+.ebs-ph__tick:nth-child(24) { --ebs-ph-i: 23; }
+.ebs-ph__tick:nth-child(n+25) { --ebs-ph-i: 24; }
 
 /* ── モーション抑制 ─────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
